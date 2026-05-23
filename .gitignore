@@ -1,0 +1,15 @@
+.env
+chromadb/
+*.pdf
+public/3D_models/
+*.glb
+models/
+medai-frontend/.env
+__pycache__/
+*.pyc
+dist/
+build/
+# Docker
+.docker/
+medical_sources/
+*pdf
