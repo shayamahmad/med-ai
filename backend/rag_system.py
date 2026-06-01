@@ -55,7 +55,7 @@ class MedicalRAG:
         self.model_name = model_name
 
         count  = self.collection.count()
-        status = "ready" if count > 0 else "EMPTY — run ingest.py first"
+        status = "ready" if count > 0 else "EMPTY - run ingest.py first"
         print(f"[RAG] Knowledge base: {count} chunks — {status}")
 
     # =========================================================

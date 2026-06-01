@@ -1,0 +1,11 @@
+{
+  "model_name": "ResNet50 Organ Classifier v2 (proxy labels)",
+  "num_classes": 27,
+  "classes": [
+    "Bladder", "Bone", "Brain", "Colon", "Esophagus",
+    "Eye_Cornea", "Eye_DR", "Eye_Degeneration", "Eye_Glaucoma", "Eye_Maculopathy",
+    "Eye_Normal", "Eye_OCT", "Eye_Other", "Eye_Vascular", "Heart",
+    "Kidney_Left", "Kidney_Right", "Knee", "Liver", "Lung_Chest",
+    "Lung_Left", "Lung_Right", "Pancreas", "Skin", "Spleen", "Stomach", "Teeth"
+  ]
+}

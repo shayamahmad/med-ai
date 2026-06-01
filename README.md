@@ -15,8 +15,19 @@ A full-stack medical AI platform featuring 8 specialized CNN models, RAG-powered
 | Backend | FastAPI, PyTorch, Python 3.11 |
 | ML Models | ResNet50, DenseNet121, EfficientNetB0, ResNet34 |
 | RAG System | ChromaDB, Mistral AI, Sentence Transformers |
-| Storage | AWS S3 (models + assets) |
-| Deployment | AWS EC2, Docker, Docker Compose |
+| Storage | Hugging Face Hub (models + assets) |
+| Deployment | Docker, Docker Compose (any VPS) |
+
+### Storage & cost (AWS replaced)
+
+| Service | Typical cost for this project (~5–15 GB assets) | Notes |
+|--------|--------------------------------------------------|--------|
+| **Hugging Face Hub** (used here) | **$0/mo** public dataset | Free storage + bandwidth for public repos. One env var. Best for ML files. |
+| AWS S3 + EC2 (old setup) | **~$15–40+/mo** | S3 storage + egress + EC2 instance; IAM keys; easy to overspend on egress |
+| Cloudflare R2 | ~$0.08–0.23/mo storage | Cheaper than S3, no egress fees; still needs setup + S3-compatible code |
+| Google Drive / Dropbox | $0–3/mo | Poor fit for automated app downloads |
+
+**Mistral API** (RAG / tutor only): pay-as-you-go, e.g. `mistral-small` ~$0.25 per 1M input tokens — not included in HF storage.
 
 ---
 
@@ -65,7 +76,7 @@ AI Doctor Help/
 │       ├── components/       # Navbar, ImageUploader, ConfidenceBar
 │       ├── api/              # Axios API client
 │       └── types/            # TypeScript interfaces
-├── models/                   # Trained .pth model files (or S3)
+├── models/                   # Trained .pth files (local or Hugging Face)
 ├── Dockerfile.backend
 ├── Dockerfile.frontend
 ├── docker-compose.yml
@@ -80,7 +91,7 @@ AI Doctor Help/
 - Python 3.11+
 - Node.js 18+
 - CUDA GPU (optional, CPU works too)
-- AWS credentials (for S3)
+- Hugging Face account (free — for hosting model files)
 
 ### Backend Setup
 
@@ -121,15 +132,32 @@ Create a `.env` file in the project root:
 # Mistral AI
 MISTRAL_API_KEY=your_mistral_key_here
 
-# AWS S3
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=us-east-1
-S3_BUCKET_NAME=your-bucket-name
+# Hugging Face (models, ChromaDB, medical PDFs)
+HF_ASSETS_REPO=your-username/medai-assets
+# HF_TOKEN=hf_...          # only for private repos
 
 # Backend URL (for frontend)
 REACT_APP_API_URL=http://localhost:8000
 ```
+
+### Host assets on Hugging Face (one-time, free)
+
+1. Create a dataset: [huggingface.co/new-dataset](https://huggingface.co/new-dataset) → `your-username/medai-assets`
+2. If migrating from AWS, download `models/`, `chromadb/`, `medical_sources/` from S3 once, then:
+
+```bash
+huggingface-cli login
+npm run upload:assets -- your-username/medai-assets
+```
+
+3. In `.env`:
+
+```env
+HF_ASSETS_REPO=your-username/medai-assets
+REACT_APP_HF_ASSETS_REPO=your-username/medai-assets
+```
+
+4. Download locally: `npm run download:assets` — backend auto-syncs on startup.
 
 ---
 
@@ -183,7 +211,11 @@ services:
 
 ---
 
-## AWS EC2 Deployment
+## Deploy anywhere (no AWS required)
+
+Use any cheap VPS (Hetzner, DigitalOcean, Oracle free tier) + Docker — no S3 or EC2 lock-in.
+
+## VPS / Cloud Deployment
 
 ### Instance Setup
 
@@ -207,7 +239,7 @@ nano .env
 docker-compose up -d
 ```
 
-### EC2 Security Group — Open these ports
+### Firewall — open these ports
 
 | Port | Purpose |
 |---|---|

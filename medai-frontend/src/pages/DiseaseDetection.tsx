@@ -83,7 +83,14 @@ const DiseaseDetection: React.FC = () => {
       try { const gc = await getGradcam(file, active.id); setGradcam(gc.gradcam_image); } catch {}
       finally { setGcLoading(false); }
     } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Analysis failed. Ensure the backend is running on port 8000.');
+      const detail = e?.response?.data?.detail;
+      if (detail) {
+        setError(typeof detail === 'string' ? detail : JSON.stringify(detail));
+      } else if (e?.code === 'ECONNABORTED' || e?.message?.includes('Network Error')) {
+        setError('Backend not responding. Run: npm start (from project root) or start uvicorn on port 8000.');
+      } else {
+        setError('Analysis failed. Ensure the backend is running on port 8000.');
+      }
     } finally { setLoading(false); }
   };
 

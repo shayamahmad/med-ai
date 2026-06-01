@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 
 MODELS_DIR = BASE_DIR / "models"
+BUNDLED_DIR = BASE_DIR / "bundled_models"
 
 # ───────────────────────────────────────────────────────────
 # Metadata Loader
@@ -25,6 +26,24 @@ def load_metadata(folder, filename):
 
     with open(path, "r") as f:
         return json.load(f)
+
+
+def load_metadata_optional(folder, filename):
+
+    path = MODELS_DIR / folder / filename
+
+    if path.exists():
+        with open(path, "r") as f:
+            return json.load(f)
+
+    bundled = BUNDLED_DIR / filename
+    if bundled.exists():
+        logger.info("Using bundled metadata: %s", bundled)
+        with open(bundled, "r") as f:
+            return json.load(f)
+
+    logger.warning(f"Metadata not found: {path}")
+    return None
 
 # ───────────────────────────────────────────────────────────
 # Organ → disease model mapping
@@ -202,125 +221,112 @@ class ModelRegistry:
 
     def load_metadata_files(self):
 
-        self.organ_meta = load_metadata(
+        self.organ_meta = load_metadata_optional(
             "organ_detection",
-            "organ_metadata_v2.json"
+            "organ_metadata_v2.json",
         )
+        if self.organ_meta:
+            self.labels["organ"] = self.organ_meta["classes"]
 
-        self.bone_meta = load_metadata(
+        self.bone_meta = load_metadata_optional(
             "bone_model",
             "bone_metadata.json"
         )
 
-        self.brain_meta = load_metadata(
+        self.brain_meta = load_metadata_optional(
             "brain_model",
             "brain_metadata.json"
         )
 
-        self.chest_meta = load_metadata(
+        self.chest_meta = load_metadata_optional(
             "chest_model",
             "chest_metadata.json"
         )
 
-        self.dental_meta = load_metadata(
+        self.dental_meta = load_metadata_optional(
             "dental_model",
             "dental_metadata.json"
         )
 
-        self.eye_meta = load_metadata(
+        self.eye_meta = load_metadata_optional(
             "eye_model",
             "eye_metadata.json"
         )
 
-        self.knee_meta = load_metadata(
+        self.knee_meta = load_metadata_optional(
             "knee_model",
             "knee_metadata.json"
         )
 
-        self.skin_meta = load_metadata(
+        self.skin_meta = load_metadata_optional(
             "skin_model",
             "skin_metadata.json"
         )
 
-        self.labels = {
-            "organ": self.organ_meta["classes"],
-            "chest": self.chest_meta["classes"],
-            "brain": self.brain_meta["classes"],
-            "eye": self.eye_meta["classes"],
-            "skin": self.skin_meta["classes"],
-            "bone": self.bone_meta["classes"],
-            "knee": self.knee_meta["classes"],
-            "dental": self.dental_meta["classes"],
-        }
+        if "organ" not in self.labels:
+            self.labels = {}
+        for key, meta in (
+            ("chest", self.chest_meta),
+            ("brain", self.brain_meta),
+            ("eye", self.eye_meta),
+            ("skin", self.skin_meta),
+            ("bone", self.bone_meta),
+            ("knee", self.knee_meta),
+            ("dental", self.dental_meta),
+        ):
+            if meta:
+                self.labels[key] = meta["classes"]
 
     # ───────────────────────────────────────────────────────
+
+    def _load_if_ready(self, attr, folder, filename, build_fn, meta):
+
+        if not meta:
+            setattr(self, attr, None)
+            return
+
+        model = _load_model(
+            folder,
+            filename,
+            build_fn,
+            meta["num_classes"],
+            self.device,
+        )
+
+        if model is None:
+            from fallback_models import load_fallback_model
+
+            model = load_fallback_model(attr, meta, self.device)
+
+        setattr(self, attr, model)
 
     def load_all_models(self):
 
         self.load_metadata_files()
 
-        self.organ = _load_model(
-            "organ_detection",
-            "organ_model_v2.pth",
-            _organ_resnet50,
-            self.organ_meta["num_classes"],
-            self.device
+        self._load_if_ready(
+            "organ", "organ_detection", "organ_model_v2.pth", _organ_resnet50, self.organ_meta
         )
-
-        self.chest = _load_model(
-            "chest_model",
-            "chest_model.pth",
-            _resnet50_v1,
-            self.chest_meta["num_classes"],
-            self.device
+        self._load_if_ready(
+            "chest", "chest_model", "chest_model.pth", _resnet50_v1, self.chest_meta
         )
-
-        self.brain = _load_model(
-            "brain_model",
-            "brain_model.pth",
-            _resnet50_v1,
-            self.brain_meta["num_classes"],
-            self.device
+        self._load_if_ready(
+            "brain", "brain_model", "brain_model.pth", _resnet50_v1, self.brain_meta
         )
-
-        self.skin = _load_model(
-            "skin_model",
-            "skin_model.pth",
-            _skin_resnet50,
-            self.skin_meta["num_classes"],
-            self.device
+        self._load_if_ready(
+            "skin", "skin_model", "skin_model.pth", _skin_resnet50, self.skin_meta
         )
-
-        self.eye = _load_model(
-            "eye_model",
-            "eye_model.pth",
-            _resnet50_v1,
-            self.eye_meta["num_classes"],
-            self.device
+        self._load_if_ready(
+            "eye", "eye_model", "eye_model.pth", _resnet50_v1, self.eye_meta
         )
-
-        self.bone = _load_model(
-            "bone_model",
-            "bone_model.pth",
-            _bone_resnet50,
-            self.bone_meta["num_classes"],
-            self.device
+        self._load_if_ready(
+            "bone", "bone_model", "bone_model.pth", _bone_resnet50, self.bone_meta
         )
-
-        self.knee = _load_model(
-            "knee_model",
-            "knee_model.pth",
-            _resnet50_v1,
-            self.knee_meta["num_classes"],
-            self.device
+        self._load_if_ready(
+            "knee", "knee_model", "knee_model.pth", _resnet50_v1, self.knee_meta
         )
-
-        self.dental = _load_model(
-            "dental_model",
-            "dental_model.pth",
-            _resnet50_v1,
-            self.dental_meta["num_classes"],
-            self.device
+        self._load_if_ready(
+            "dental", "dental_model", "dental_model.pth", _resnet50_v1, self.dental_meta
         )
 
     # ───────────────────────────────────────────────────────

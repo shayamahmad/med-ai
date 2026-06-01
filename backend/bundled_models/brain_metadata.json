@@ -1,0 +1,15 @@
+{
+  "model_name": "ResNet50 Brain Tumor",
+  "num_classes": 4,
+  "classes": ["Glioma", "Meningioma", "No_Tumor", "Pituitary"],
+  "class_to_idx": {
+    "Glioma": 0,
+    "Meningioma": 1,
+    "No_Tumor": 2,
+    "Pituitary": 3
+  },
+  "input_size": [224, 224],
+  "normalize_mean": [0.485, 0.456, 0.406],
+  "normalize_std": [0.229, 0.224, 0.225],
+  "scan_type": "MRI"
+}

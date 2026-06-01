@@ -44,5 +44,5 @@ requests==2.31.0
 tqdm==4.66.4
 wikipedia-api==0.6.0
 langchain-mistralai
-image_utils
-boto3
+huggingface_hub>=0.23.0
+safetensors>=0.4.0

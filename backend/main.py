@@ -13,7 +13,7 @@ from image_utils import (
 from gradcam import GradCAMManager
 from symptom_checker import check_symptoms
 from rag_system import MedicalRAG
-from s3_loader import load_all_assets
+from asset_loader import load_all_assets
 
 # ───────────────────────────────────────────────────────────
 # Logging
@@ -38,7 +38,7 @@ rag = MedicalRAG()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    logger.info("Downloading assets from S3...")
+    logger.info("Downloading assets from Hugging Face...")
 
     load_all_assets()
 
@@ -89,7 +89,11 @@ def require_model(key: str):
     if model is None:
         raise HTTPException(
             status_code=503,
-            detail=f"Model '{key}' is not available."
+            detail=(
+                f"Model '{key}' is not loaded. "
+                "Set HF_ASSETS_REPO in .env, run 'npm run download:assets', "
+                "then restart the backend (or POST /system/sync-assets)."
+            ),
         )
 
     return model
@@ -125,6 +129,21 @@ async def model_status():
 
     return registry.status()
 
+
+@app.post("/system/sync-assets", tags=["System"])
+async def sync_assets():
+    """Re-download assets (if configured) and reload CNN models without full restart."""
+    load_all_assets(force=True)
+    registry.load_all_models()
+    status = registry.status()
+    loaded = sum(status.values())
+    return {
+        "status": "ok",
+        "loaded": loaded,
+        "total": len(status),
+        "models": status,
+    }
+
 # ───────────────────────────────────────────────────────────
 # Organ Classifier
 # ───────────────────────────────────────────────────────────
@@ -132,25 +151,30 @@ async def model_status():
 @app.post("/classify/organ", tags=["Organ Classifier"])
 async def classify_organ(file: UploadFile = File(...)):
 
-    model = require_model("organ")
-
-    labels = registry.labels["organ"]
-
     data = await file.read()
 
-    tensor = preprocess_bytes(data, "organ")
+    model = registry.get("organ")
+    if model is not None:
+        labels = registry.labels.get("organ", [])
+        tensor = preprocess_bytes(data, "organ")
+        result = run_inference(
+            model,
+            tensor,
+            labels,
+            registry.device,
+        )
+        return {"model": "organ_v2", **result}
 
-    result = run_inference(
-        model,
-        tensor,
-        labels,
-        registry.device
-    )
+    if not registry.labels.get("organ"):
+        registry.load_metadata_files()
 
-    return {
-        "model": "organ_v2",
-        **result
-    }
+    try:
+        from organ_proxy import classify_organ_via_specialists
+
+        result = classify_organ_via_specialists(data, registry)
+        return {"model": "organ_proxy", **result}
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 # ───────────────────────────────────────────────────────────
 # Disease Models

@@ -1,0 +1,14 @@
+{
+  "name": "med-ai",
+  "private": true,
+  "description": "MedAI monorepo — use npm scripts from project root",
+  "scripts": {
+    "start": "powershell -ExecutionPolicy Bypass -File ./scripts/start.ps1",
+    "start:backend": "cd backend && .venv\\Scripts\\uvicorn main:app --reload --port 8000",
+    "start:frontend": "cd medai-frontend && npm start",
+    "install:frontend": "npm install --prefix medai-frontend",
+    "install:backend": "cd backend && py -3.13 -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt",
+    "download:assets": "backend\\.venv\\Scripts\\python.exe scripts\\download_assets.py",
+    "upload:assets": "backend\\.venv\\Scripts\\python.exe scripts\\upload_to_hf.py"
+  }
+}
