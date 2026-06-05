@@ -28,4 +28,6 @@ export interface SymptomResult {
   sources: string[];
   input_symptoms: string[];
   disclaimer: string;
+  summary?: string;
+  diagnoses?: import('./clinical').StructuredDiagnosis[];
 }

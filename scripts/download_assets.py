@@ -9,8 +9,9 @@ sys.path.insert(0, str(BACKEND))
 
 from dotenv import load_dotenv
 
-load_dotenv(ROOT / ".env")
-load_dotenv(BACKEND / ".env")
+from env_config import load_project_env
+
+load_project_env()
 
 from asset_loader import load_all_assets, models_present
 from model_loader import registry

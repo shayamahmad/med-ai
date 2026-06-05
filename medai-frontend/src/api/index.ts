@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ClassificationResult, RAGResponse, SymptomResult, AutoClassifyResult, TopKItem } from '../types';
+import { DiseaseProfile, SymptomCheckResult } from '../types/clinical';
 
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const api = axios.create({ baseURL: BASE, timeout: 30000 });
@@ -49,12 +50,23 @@ export const askTutor = async (question: string): Promise<RAGResponse> => {
 };
 
 // ── Symptom Checker ───────────────────────────────────────────
-export const checkSymptoms = async (symptoms: string): Promise<SymptomResult> => {
+export const checkSymptoms = async (symptoms: string): Promise<SymptomCheckResult> => {
   const symptomList = symptoms
     .split(/[,;]+/)
     .map(s => s.trim().toLowerCase())
     .filter(Boolean);
   const { data } = await api.post('/symptom-check', { symptoms: symptomList });
+  return data;
+};
+
+export const fetchClinicalProfile = async (
+  slug: string,
+  name: string,
+): Promise<DiseaseProfile> => {
+  const { data } = await api.get(`/clinical/diseases/${encodeURIComponent(slug)}`, {
+    params: { name, generate: true },
+    timeout: 60000,
+  });
   return data;
 };
 

@@ -1,121 +1,70 @@
-import json 
-import os 
-import re 
-import math 
-import collections
-from collections import Counter 
+import logging
 
+from clinical.diagnosis_parser import build_structured_symptom_query, parse_structured_response
+from clinical.schemas import SymptomCheckResponse
+from clinical.service import attach_clinical_flags
 
-def _build_query(symptoms: list) -> str:
-    """Build a structured clinical query from symptom list."""
-    symptom_text = ", ".join(symptoms)
-    return (
-        f"A patient presents with the following symptoms: {symptom_text}. "
-        f"Based on these symptoms, what are the most likely medical diagnoses? "
-        f"For each possible diagnosis explain: "
-        f"1) Why it matches these symptoms "
-        f"2) Key distinguishing features "
-        f"3) Urgency level (low/medium/high) "
-        f"4) Whether the patient should see a doctor immediately. "
-        f"Be specific and clinical."
-    )
+logger = logging.getLogger(__name__)
+
+DISCLAIMER = (
+    "This tool is for educational purposes only. "
+    "It does not replace professional medical advice, diagnosis, or treatment. "
+    "Possible conditions listed are not confirmed diagnoses. "
+    "Please consult a licensed healthcare professional."
+)
 
 
 def check_symptoms(symptoms: list, rag_instance=None) -> dict:
     """
-    Match symptoms using RAG system (ChromaDB + Mistral).
-
-    Args:
-        symptoms:     List of symptom strings e.g. ["fever", "dry cough", "fatigue"]
-        rag_instance: MedicalRAG instance from rag_system.py
-
-    Returns:
-        {
-            "input_symptoms": [...],
-            "answer": "Clinical differential diagnosis from Mistral...",
-            "sources": [...],
-            "disclaimer": "..."
-        }
+    Match symptoms using RAG system (ChromaDB + Mistral) and return structured diagnoses.
     """
     if not symptoms:
-        return {
-            "input_symptoms": symptoms,
-            "answer": "",
-            "sources": [],
-            "disclaimer": "No symptoms provided.",
-        }
+        return SymptomCheckResponse(
+            input_symptoms=symptoms,
+            answer="",
+            sources=[],
+            disclaimer="No symptoms provided.",
+        ).model_dump()
 
     if rag_instance is None:
-        return {
-            "input_symptoms": symptoms,
-            "answer": "RAG system not available.",
-            "sources": [],
-            "disclaimer": "For educational purposes only.",
-        }
+        return SymptomCheckResponse(
+            input_symptoms=symptoms,
+            answer="RAG system not available. Add MISTRAL_API_KEY to .env and restart the backend.",
+            sources=[],
+            disclaimer=DISCLAIMER,
+        ).model_dump()
 
-    query = _build_query(symptoms)
-
-    try:
-        result = rag_instance.tutor_chat(query)
-        return {
-            "input_symptoms": symptoms,
-            "answer":    result.get("answer", ""),
-            "sources":   result.get("sources", []),
-            "disclaimer": (
-                "This tool is for educational purposes only. "
-                "It does not replace professional medical advice. "
-                "Please consult a qualified doctor for diagnosis."
-            ),
-        }
-    except Exception as e:
-        return {
-            "input_symptoms": symptoms,
-            "answer": f"Error querying knowledge base: {str(e)}",
-            "sources": [],
-            "disclaimer": "For educational purposes only.",
-        }
-
-
-async def check_symptoms_with_mistralai(description: str, rag_instance=None) -> dict:
-    """
-    Extract structured symptoms from natural language description
-    then run check_symptoms with RAG.
-    """
-    import httpx
-
-    prompt = f"""
-A patient described their symptoms as:
-"{description}"
-
-Extract a list of individual medical symptoms from this description.
-Reply ONLY with a JSON array of symptom strings, e.g.:
-["fever", "dry cough", "shortness of breath", "fatigue"]
-No explanation. No markdown. Just the JSON array.
-"""
+    query = build_structured_symptom_query(symptoms)
 
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
-            resp = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "x-api-key": os.environ.get("ANTHROPIC_API_KEY", ""),
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json",
-                },
-                json={
-                    "model": "claude-sonnet-4-20250514",
-                    "max_tokens": 300,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
-            )
-        data = resp.json()
-        raw  = data["content"][0]["text"].strip()
-        raw  = re.sub(r"```json|```", "", raw).strip()
-        extracted = json.loads(raw)
-        if isinstance(extracted, list):
-            return check_symptoms(extracted, rag_instance=rag_instance)
-    except Exception:
-        pass
+        result = rag_instance.query(
+            question=query,
+            context_hint=", ".join(symptoms),
+            max_tokens=1600,
+            mode="symptom",
+        )
+        parsed = parse_structured_response(result.get("answer", ""))
+        diagnoses = attach_clinical_flags(parsed.get("diagnoses", []))
 
-    # Fallback: treat whole description as one symptom string
-    return check_symptoms([description], rag_instance=rag_instance)
+        summary = parsed.get("summary", "")
+        answer = result.get("answer", "")
+        if summary and summary not in answer:
+            answer = f"{summary}\n\n{answer}"
+
+        response = SymptomCheckResponse(
+            input_symptoms=symptoms,
+            summary=summary,
+            diagnoses=diagnoses,
+            answer=answer,
+            sources=result.get("sources", []),
+            disclaimer=DISCLAIMER,
+        )
+        return response.model_dump()
+    except Exception as exc:
+        logger.exception("[SymptomChecker] Failed: %s", exc)
+        return SymptomCheckResponse(
+            input_symptoms=symptoms,
+            answer=f"Error querying knowledge base: {exc}",
+            sources=[],
+            disclaimer=DISCLAIMER,
+        ).model_dump()

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { askTutor } from '../api';
 import MarkdownMessage from '../components/MarkdownMessage';
 
@@ -56,8 +57,15 @@ const OrganSearch: React.FC = () => {
     try {
       const res = await askTutor(text);
       setMessages(prev => [...prev, { role: 'ai', content: res.answer, sources: res.sources }]);
-    } catch {
-      setError('Could not reach the backend. Ensure FastAPI is running on port 8000.');
+    } catch (err: unknown) {
+      const detail =
+        axios.isAxiosError(err) && err.response?.data?.detail
+          ? String(err.response.data.detail)
+          : null;
+      setError(
+        detail ??
+          'Could not reach the backend. Run `npm run setup` once, then `npm start` and wait for the backend terminal to show "Application startup complete".'
+      );
       setMessages(prev => prev.slice(0, -1));
     } finally {
       setLoading(false);

@@ -48,10 +48,31 @@ def load_fallback_model(key: str, meta: dict, device: torch.device):
         return None
 
     try:
-        weights_path = hf_hub_download(
-            repo_id=spec["repo_id"],
-            filename=spec["filename"],
-        )
+        weights_path = None
+        last_exc = None
+        for attempt in range(3):
+            try:
+                weights_path = hf_hub_download(
+                    repo_id=spec["repo_id"],
+                    filename=spec["filename"],
+                )
+                break
+            except RuntimeError as exc:
+                last_exc = exc
+                if "client has been closed" not in str(exc).lower():
+                    raise
+                logger.warning(
+                    "HF download retry %s/3 for '%s': %s",
+                    attempt + 1,
+                    key,
+                    exc,
+                )
+                import time
+                time.sleep(1.5 * (attempt + 1))
+
+        if weights_path is None:
+            raise last_exc or RuntimeError("HF download failed")
+
         builder = BUILDERS[spec["builder"]]
         model = builder(meta["num_classes"])
         state = load_file(weights_path)

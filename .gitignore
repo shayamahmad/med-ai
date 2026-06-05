@@ -13,3 +13,4 @@ build/
 .docker/
 medical_sources/
 *pdf
+backend/data/*.db

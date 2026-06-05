@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 
+from env_config import load_project_env
 from model_loader import registry
 from image_utils import (
     preprocess_bytes,
@@ -12,8 +13,12 @@ from image_utils import (
 )
 from gradcam import GradCAMManager
 from symptom_checker import check_symptoms
-from rag_system import MedicalRAG
-from asset_loader import load_all_assets
+from clinical.schemas import DiseaseLookupRequest
+from clinical.db import get_disease_by_slug, list_disease_slugs
+from clinical.service import get_or_generate_profile
+from startup import get_rag, rag_status, run_startup_async
+
+load_project_env()
 
 # ───────────────────────────────────────────────────────────
 # Logging
@@ -29,8 +34,6 @@ logger = logging.getLogger(__name__)
 
 gradcam_manager = GradCAMManager()
 
-rag = MedicalRAG()
-
 # ───────────────────────────────────────────────────────────
 # Startup / Shutdown
 # ───────────────────────────────────────────────────────────
@@ -38,19 +41,10 @@ rag = MedicalRAG()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    logger.info("Downloading assets from Hugging Face...")
+    logger.info("Starting MedAI backend...")
 
-    load_all_assets()
-
-    logger.info("Loading all models...")
-
-    registry.load_all_models()
-
-    status = registry.status()
-
-    loaded = sum(status.values())
-
-    logger.info(f"Models loaded: {loaded}/8 - {status}")
+    startup_info = await run_startup_async()
+    app.state.startup = startup_info
 
     yield
 
@@ -98,6 +92,20 @@ def require_model(key: str):
 
     return model
 
+
+def _safe_rag():
+    try:
+        return get_rag()
+    except RuntimeError:
+        return None
+
+
+def require_rag():
+    try:
+        return get_rag()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
 # ───────────────────────────────────────────────────────────
 # System Routes
 # ───────────────────────────────────────────────────────────
@@ -114,6 +122,7 @@ async def root():
 async def health():
 
     status = registry.status()
+    rag_ready, rag_error = rag_status()
 
     return {
         "status": "ok",
@@ -121,6 +130,8 @@ async def health():
         "device": str(registry.device),
         "loaded": sum(status.values()),
         "total": len(status),
+        "rag_ready": rag_ready,
+        "rag_error": rag_error,
     }
 
 
@@ -133,6 +144,8 @@ async def model_status():
 @app.post("/system/sync-assets", tags=["System"])
 async def sync_assets():
     """Re-download assets (if configured) and reload CNN models without full restart."""
+    from asset_loader import load_all_assets
+
     load_all_assets(force=True)
     registry.load_all_models()
     status = registry.status()
@@ -478,8 +491,55 @@ async def symptom_check(payload: dict):
 
     return check_symptoms(
         symptoms,
-        rag_instance=rag
+        rag_instance=_safe_rag(),
     )
+
+# ───────────────────────────────────────────────────────────
+# Clinical Disease Profiles
+# ───────────────────────────────────────────────────────────
+
+@app.get("/clinical/diseases", tags=["Clinical"])
+async def clinical_disease_index(limit: int = Query(default=100, ge=1, le=500)):
+    return {"diseases": list_disease_slugs(limit=limit)}
+
+
+@app.get("/clinical/diseases/{slug}", tags=["Clinical"])
+async def clinical_disease_detail(
+    slug: str,
+    name: str = Query(default=""),
+    generate: bool = Query(default=True),
+):
+    profile = get_disease_by_slug(slug)
+    if profile is None and name:
+        profile = get_or_generate_profile(
+            name,
+            rag_instance=_safe_rag(),
+            generate=generate,
+        )
+    if profile is None and generate:
+        profile = get_or_generate_profile(
+            slug.replace("-", " "),
+            rag_instance=_safe_rag(),
+            generate=True,
+        )
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Disease profile not found.")
+    return profile.model_dump()
+
+
+@app.post("/clinical/diseases/lookup", tags=["Clinical"])
+async def clinical_disease_lookup(payload: DiseaseLookupRequest):
+    profile = get_or_generate_profile(
+        payload.name,
+        rag_instance=_safe_rag(),
+        generate=payload.generate_if_missing,
+    )
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No clinical profile available for this condition.",
+        )
+    return profile.model_dump()
 
 # ───────────────────────────────────────────────────────────
 # RAG Query
@@ -496,6 +556,7 @@ async def rag_query(payload: dict):
             detail="Query is empty."
         )
 
+    rag = require_rag()
     answer = rag.tutor_chat(query)
 
     return {

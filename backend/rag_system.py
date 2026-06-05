@@ -1,10 +1,15 @@
 import os
+import logging
+
 import chromadb
 from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer
-from mistralai.client import Mistral  
-from dotenv import load_dotenv
-load_dotenv()        
+from mistralai.client import Mistral
+from env_config import load_project_env
+
+load_project_env()
+
+logger = logging.getLogger(__name__)
 
 
 class MedicalRAG:
@@ -41,22 +46,24 @@ class MedicalRAG:
         )
 
         # ── Embedding model (sentence-transformers) ──────────
-        print(f"[RAG] Loading embedding model: {embed_model}")
+        logger.info("[RAG] Loading embedding model: %s", embed_model)
         self.embedder = SentenceTransformer(embed_model)
 
         # ── Mistral client (latest SDK) ──────────────────────
-        mistral_api_key = os.environ.get("MISTRAL_API_KEY")
-        if not mistral_api_key:
-            raise EnvironmentError(
-                "[RAG] MISTRAL_API_KEY not found. "
-                "Export it before running: export MISTRAL_API_KEY=your-key"
+        mistral_api_key = os.environ.get("MISTRAL_API_KEY", "").strip()
+        if not mistral_api_key or mistral_api_key.startswith("your_"):
+            self.mistral = None
+            logger.warning(
+                "[RAG] MISTRAL_API_KEY not set — AI tutor and symptom chat disabled. "
+                "Add your key to .env and restart."
             )
-        self.mistral    = Mistral(api_key=mistral_api_key)   # ✅ Mistral, not MistralClient
+        else:
+            self.mistral = Mistral(api_key=mistral_api_key)
         self.model_name = model_name
 
-        count  = self.collection.count()
+        count = self.collection.count()
         status = "ready" if count > 0 else "EMPTY - run ingest.py first"
-        print(f"[RAG] Knowledge base: {count} chunks — {status}")
+        logger.info("[RAG] Knowledge base: %s chunks — %s", count, status)
 
     # =========================================================
     # ADD DOCUMENTS  (called by ingest.py)
@@ -275,6 +282,11 @@ MEDICAL KNOWLEDGE BASE CONTEXT:
                     })
 
         messages.append({"role": "user", "content": question})
+
+        if self.mistral is None:
+            raise EnvironmentError(
+                "MISTRAL_API_KEY not set. Copy .env.example to .env, add your key, and restart."
+            )
 
         # 4. Call Mistral — new SDK syntax ✅
         response = self.mistral.chat.complete(

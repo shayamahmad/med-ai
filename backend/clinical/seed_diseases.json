@@ -1,0 +1,351 @@
+[
+  {
+    "slug": "influenza",
+    "name": "Influenza (Flu)",
+    "aliases": ["flu", "seasonal influenza", "influenza a", "influenza b"],
+    "severity": "moderate",
+    "overview": "Influenza is a contagious respiratory illness caused by influenza viruses. It typically presents with sudden fever, cough, fatigue, and body aches, and can range from mild to severe.",
+    "underlying_cause": "Infection with influenza A or B viruses, usually spread through respiratory droplets from coughs, sneezes, or contaminated surfaces.",
+    "first_line_treatment": [
+      "Rest and adequate hydration to support recovery",
+      "Antiviral medications may be considered early in high-risk patients when prescribed by a clinician",
+      "Fever and pain management with over-the-counter agents as directed by a healthcare provider"
+    ],
+    "management_strategies": [
+      "Isolation during the contagious period to reduce transmission",
+      "Monitoring for complications such as pneumonia or dehydration",
+      "Early clinical evaluation for high-risk groups (elderly, pregnant, immunocompromised, chronic lung/heart disease)"
+    ],
+    "supportive_care": [
+      "Increased fluid intake",
+      "Rest in a comfortable environment",
+      "Humidified air for cough and congestion relief",
+      "Nutritious, easy-to-digest meals"
+    ],
+    "medication_categories": [
+      {"category": "Antivirals", "purpose": "May reduce duration and severity when started early under medical supervision", "note": "Prescription-only; not appropriate for everyone"},
+      {"category": "Antipyretics / analgesics", "purpose": "Fever and body ache relief", "note": "Use only as directed on label or by a clinician"},
+      {"category": "Cough suppressants / expectorants", "purpose": "Symptom relief for cough", "note": "Not a substitute for medical evaluation if breathing worsens"}
+    ],
+    "home_care": [
+      "Stay home until fever-free for 24 hours without fever-reducing medication",
+      "Use tissues and hand hygiene to protect household contacts",
+      "Avoid close contact with vulnerable individuals",
+      "Track temperature and symptom progression daily"
+    ],
+    "diagnostic_tests": [
+      "Rapid influenza diagnostic test (RIDT)",
+      "PCR testing for influenza virus",
+      "Clinical assessment when testing is unavailable"
+    ],
+    "recovery_timeline": "Most healthy adults recover within 1–2 weeks. Fatigue and cough may persist longer. Complications can prolong recovery.",
+    "prevention": [
+      "Annual influenza vaccination",
+      "Hand hygiene and respiratory etiquette",
+      "Avoiding contact with sick individuals during peak season"
+    ],
+    "warning_signs": [
+      "Difficulty breathing or shortness of breath at rest",
+      "Persistent chest pain or pressure",
+      "Confusion, inability to wake, or severe dizziness",
+      "High fever not responding to appropriate measures",
+      "Symptoms that improve then return with high fever and worse cough"
+    ],
+    "patient_education": [
+      "Influenza is not the same as the common cold and can cause serious complications",
+      "Antibiotics do not treat viral influenza",
+      "Vaccination remains the most effective preventive strategy",
+      "Seek urgent care if warning signs develop"
+    ]
+  },
+  {
+    "slug": "covid-19",
+    "name": "COVID-19 (SARS-CoV-2 infection)",
+    "aliases": ["covid", "coronavirus disease 2019", "sars-cov-2"],
+    "severity": "moderate",
+    "overview": "COVID-19 is a respiratory and systemic illness caused by SARS-CoV-2. Presentations range from mild upper respiratory symptoms to severe pneumonia and multi-organ involvement.",
+    "underlying_cause": "Infection with SARS-CoV-2, primarily transmitted via respiratory droplets and aerosols in close contact settings.",
+    "first_line_treatment": [
+      "Supportive care for mild illness: rest, hydration, and symptom monitoring",
+      "Clinical evaluation to determine eligibility for antiviral or monoclonal therapies in high-risk patients",
+      "Oxygen support and hospital care for moderate-to-severe disease"
+    ],
+    "management_strategies": [
+      "Risk stratification based on age, comorbidities, and oxygen saturation",
+      "Isolation per public health guidance to prevent transmission",
+      "Monitoring for progression: worsening breathlessness, hypoxia, or persistent high fever"
+    ],
+    "supportive_care": [
+      "Adequate hydration and nutrition",
+      "Rest and gradual return to activity",
+      "Pulse oximetry monitoring when advised by a clinician",
+      "Throat soothing measures for cough and sore throat"
+    ],
+    "medication_categories": [
+      {"category": "Antivirals", "purpose": "May reduce severe outcomes in eligible patients when prescribed early", "note": "Requires medical assessment and eligibility criteria"},
+      {"category": "Antipyretics", "purpose": "Fever and discomfort management", "note": "Follow clinician or label guidance"},
+      {"category": "Bronchodilators / inhaled therapies", "purpose": "May be used for wheeze or underlying lung disease", "note": "Only under medical supervision"}
+    ],
+    "home_care": [
+      "Self-isolate according to local guidelines",
+      "Monitor temperature, breathing, and oxygen levels if available",
+      "Inform close contacts per public health recommendations",
+      "Avoid sharing personal items and maintain ventilation"
+    ],
+    "diagnostic_tests": [
+      "RT-PCR for SARS-CoV-2",
+      "Rapid antigen testing",
+      "Chest imaging when pneumonia is suspected"
+    ],
+    "recovery_timeline": "Mild cases often improve within 1–2 weeks. Some patients experience prolonged fatigue or post-viral symptoms lasting weeks to months.",
+    "prevention": [
+      "Staying up to date with recommended vaccinations",
+      "Good ventilation in indoor spaces",
+      "Hand hygiene and masking during high transmission periods when advised"
+    ],
+    "warning_signs": [
+      "Severe difficulty breathing or blue lips/face",
+      "Persistent pain or pressure in the chest",
+      "New confusion or inability to stay awake",
+      "SpO2 persistently below clinician-recommended thresholds",
+      "Inability to keep fluids down or signs of dehydration"
+    ],
+    "patient_education": [
+      "Not all cases require hospitalization; many resolve with supportive care",
+      "Long COVID symptoms can occur and warrant medical follow-up",
+      "Vaccination reduces risk of severe disease",
+      "Do not use unproven therapies without medical guidance"
+    ]
+  },
+  {
+    "slug": "community-acquired-pneumonia",
+    "name": "Community-Acquired Pneumonia (CAP)",
+    "aliases": ["cap", "pneumonia", "bacterial pneumonia", "viral pneumonia"],
+    "severity": "severe",
+    "overview": "Community-acquired pneumonia is an infection of the lung parenchyma acquired outside the hospital. It commonly causes fever, productive cough, chest pain, and shortness of breath.",
+    "underlying_cause": "Bacterial pathogens (e.g., Streptococcus pneumoniae), viruses, or atypical organisms infecting the lower respiratory tract.",
+    "first_line_treatment": [
+      "Empiric antibiotic therapy when bacterial infection is suspected, selected by a clinician based on severity and local guidelines",
+      "Hospital admission for moderate-to-severe cases requiring oxygen or IV therapy",
+      "Supportive care including oxygen, fluids, and respiratory support as needed"
+    ],
+    "management_strategies": [
+      "Severity assessment tools (e.g., CURB-65) to guide outpatient vs inpatient care",
+      "Blood cultures and sputum studies when feasible before antibiotics in severe disease",
+      "Follow-up imaging if symptoms fail to improve within expected timeframe"
+    ],
+    "supportive_care": [
+      "Supplemental oxygen to maintain adequate saturation",
+      "IV or oral hydration for dehydration",
+      "Chest physiotherapy when indicated",
+      "Nutritional support during prolonged illness"
+    ],
+    "medication_categories": [
+      {"category": "Antibiotics", "purpose": "Treat bacterial and atypical causes when clinically indicated", "note": "Selection and duration must be determined by a licensed clinician"},
+      {"category": "Antipyretics", "purpose": "Fever control and comfort", "note": "Adjunct to definitive therapy"},
+      {"category": "Bronchodilators", "purpose": "Relieve bronchospasm in selected patients", "note": "Not first-line for all pneumonia cases"}
+    ],
+    "home_care": [
+      "Complete prescribed antibiotic course if outpatient therapy is deemed appropriate",
+      "Rest and increased fluid intake",
+      "Monitor breathing rate and oxygen symptoms closely",
+      "Return for reassessment if no improvement in 48–72 hours"
+    ],
+    "diagnostic_tests": [
+      "Chest X-ray or CT chest",
+      "Complete blood count and inflammatory markers",
+      "Sputum culture and Gram stain",
+      "Blood cultures in hospitalized patients",
+      "Pulse oximetry"
+    ],
+    "recovery_timeline": "Improvement often begins within 48–72 hours of appropriate therapy, with full recovery over 2–6 weeks depending on severity and host factors.",
+    "prevention": [
+      "Pneumococcal vaccination per age and risk-based schedules",
+      "Influenza vaccination",
+      "Smoking cessation and management of chronic lung disease"
+    ],
+    "warning_signs": [
+      "Severe shortness of breath or inability to speak full sentences",
+      "Cyanosis or oxygen saturation below safe thresholds",
+      "Altered mental status or hypotension",
+      "High fever with rigors not improving with treatment",
+      "Significant pleuritic chest pain suggesting complications"
+    ],
+    "patient_education": [
+      "Pneumonia can be life-threatening and requires professional assessment",
+      "Not all cough with fever is pneumonia — imaging often confirms diagnosis",
+      "Early treatment improves outcomes",
+      "Never share or stop antibiotics without medical advice"
+    ]
+  },
+  {
+    "slug": "acute-bronchitis",
+    "name": "Acute Bronchitis",
+    "aliases": ["bronchitis", "chest cold"],
+    "severity": "mild",
+    "overview": "Acute bronchitis is a short-term inflammation of the bronchi, usually following a viral upper respiratory infection. It presents with cough, with or without sputum, often lasting 1–3 weeks.",
+    "underlying_cause": "Most cases are viral (e.g., influenza, rhinovirus, adenovirus). Bacterial causes are uncommon and should not be assumed without clinical evaluation.",
+    "first_line_treatment": [
+      "Supportive care as the mainstay for viral bronchitis",
+      "Inhaled bronchodilators may be considered for wheeze under medical guidance",
+      "Antibiotics are generally not indicated unless a bacterial cause is suspected by a clinician"
+    ],
+    "management_strategies": [
+      "Differentiate from pneumonia and asthma exacerbation",
+      "Avoid unnecessary antibiotic use",
+      "Reassess if cough persists beyond 3 weeks or symptoms worsen"
+    ],
+    "supportive_care": [
+      "Hydration and humidified air",
+      "Rest",
+      "Honey or warm fluids for cough soothing in appropriate age groups",
+      "Avoid smoke and respiratory irritants"
+    ],
+    "medication_categories": [
+      {"category": "Cough suppressants / expectorants", "purpose": "Symptomatic cough relief", "note": "Limited evidence; use cautiously, especially in children per clinician advice"},
+      {"category": "Bronchodilators", "purpose": "Relieve wheeze and bronchospasm", "note": "Prescription or clinician-guided use"},
+      {"category": "NSAIDs / acetaminophen", "purpose": "Fever and chest discomfort", "note": "Use as directed"}
+    ],
+    "home_care": [
+      "Avoid smoking and secondhand smoke exposure",
+      "Use a humidifier if air is dry",
+      "Track cough duration and any new fever or breathlessness",
+      "Maintain activity as tolerated"
+    ],
+    "diagnostic_tests": [
+      "Clinical diagnosis in most cases",
+      "Chest X-ray if pneumonia is suspected",
+      "Pulse oximetry if breathlessness is present"
+    ],
+    "recovery_timeline": "Cough commonly lasts 1–3 weeks even as other symptoms resolve. Complete recovery is expected in uncomplicated viral cases.",
+    "prevention": [
+      "Hand hygiene and avoiding sick contacts",
+      "Influenza vaccination",
+      "Avoiding tobacco smoke and pollutants"
+    ],
+    "warning_signs": [
+      "High fever lasting more than 3 days",
+      "Significant shortness of breath or wheezing not responding to usual measures",
+      "Cough with blood-streaked sputum",
+      "Chest pain suggesting alternative diagnosis",
+      "Symptoms lasting more than 3 weeks"
+    ],
+    "patient_education": [
+      "Antibiotics are usually not needed for acute viral bronchitis",
+      "Cough may persist after infection clears — this is common",
+      "Return for evaluation if breathing worsens",
+      "Distinguishing bronchitis from pneumonia requires clinical assessment"
+    ]
+  },
+  {
+    "slug": "migraine",
+    "name": "Migraine",
+    "aliases": ["migraine headache", "migraine with aura"],
+    "severity": "moderate",
+    "overview": "Migraine is a recurrent neurological disorder characterized by episodic headache, often unilateral, pulsating, and associated with nausea, photophobia, or phonophobia.",
+    "underlying_cause": "Complex neurovascular and genetic factors involving trigeminovascular activation, cortical spreading depression, and altered sensory processing.",
+    "first_line_treatment": [
+      "Acute therapy with clinician-selected analgesics or migraine-specific agents when diagnosed",
+      "Rest in a dark, quiet environment during attacks",
+      "Preventive therapy for frequent or disabling migraines under specialist care"
+    ],
+    "management_strategies": [
+      "Headache diary to identify triggers and response to therapy",
+      "Lifestyle measures: sleep regularity, hydration, stress management",
+      "Neurology referral for refractory or atypical presentations"
+    ],
+    "supportive_care": [
+      "Cold compress to head or neck",
+      "Caffeine in moderation may help some patients when advised",
+      "Relaxation techniques and biofeedback"
+    ],
+    "medication_categories": [
+      {"category": "Triptans", "purpose": "Acute migraine-specific therapy", "note": "Prescription-only; contraindications apply"},
+      {"category": "NSAIDs / acetaminophen", "purpose": "Mild-to-moderate attack relief", "note": "Avoid medication-overuse headache with excessive use"},
+      {"category": "Antiemetics", "purpose": "Nausea control during attacks", "note": "Often combined with acute migraine therapy"}
+    ],
+    "home_care": [
+      "Identify and avoid personal triggers (sleep loss, certain foods, stress)",
+      "Maintain consistent sleep-wake schedule",
+      "Limit screen time during attacks"
+    ],
+    "diagnostic_tests": [
+      "Clinical diagnosis based on history and neurological exam",
+      "Neuroimaging when red flags or atypical features are present"
+    ],
+    "recovery_timeline": "Individual attacks typically last 4–72 hours if untreated. Preventive strategies can reduce frequency over weeks to months.",
+    "prevention": [
+      "Regular sleep and meal patterns",
+      "Hydration and moderate exercise",
+      "Preventive medications when recommended by a neurologist"
+    ],
+    "warning_signs": [
+      "Sudden worst headache of life ('thunderclap')",
+      "New neurological deficits, confusion, or seizure",
+      "Headache with fever, stiff neck, or rash",
+      "Headache after head trauma",
+      "New headache after age 50 or in pregnancy"
+    ],
+    "patient_education": [
+      "Migraine is a neurological condition, not simply a stress headache",
+      "Overuse of acute medications can worsen headache frequency",
+      "Red-flag symptoms require emergency evaluation"
+    ]
+  },
+  {
+    "slug": "angina-pectoris",
+    "name": "Angina Pectoris",
+    "aliases": ["angina", "stable angina", "chest pain cardiac"],
+    "severity": "severe",
+    "overview": "Angina pectoris is chest discomfort caused by myocardial ischemia, often due to coronary artery disease. It may present as pressure, squeezing, or pain triggered by exertion or stress.",
+    "underlying_cause": "Imbalance between myocardial oxygen demand and supply, commonly from atherosclerotic coronary narrowing or spasm.",
+    "first_line_treatment": [
+      "Immediate medical evaluation for any new or worsening chest pain",
+      "Nitrate therapy and rest as directed by emergency or cardiology teams",
+      "Long-term anti-anginal and cardiovascular risk reduction under cardiology care"
+    ],
+    "management_strategies": [
+      "ECG and cardiac biomarkers in acute presentations",
+      "Risk factor modification: blood pressure, lipids, diabetes, smoking cessation",
+      "Revascularization when indicated by coronary anatomy and symptoms"
+    ],
+    "supportive_care": [
+      "Stop exertion at onset of symptoms",
+      "Stress reduction techniques as adjunct to medical therapy",
+      "Cardiac rehabilitation after confirmed coronary disease"
+    ],
+    "medication_categories": [
+      {"category": "Nitrates", "purpose": "Acute and preventive relief of angina", "note": "Emergency use protocols apply"},
+      {"category": "Beta-blockers / calcium channel blockers", "purpose": "Reduce myocardial oxygen demand", "note": "Prescription and monitoring required"},
+      {"category": "Antiplatelet agents / statins", "purpose": "Secondary prevention in coronary disease", "note": "Long-term cardiology management"}
+    ],
+    "home_care": [
+      "Know personal angina action plan from cardiologist",
+      "Avoid heavy exertion until evaluated",
+      "Never ignore chest pain lasting more than a few minutes"
+    ],
+    "diagnostic_tests": [
+      "12-lead ECG",
+      "Cardiac troponins",
+      "Exercise stress testing or imaging stress tests",
+      "Coronary angiography when indicated"
+    ],
+    "recovery_timeline": "Acute episodes may resolve within minutes with rest and appropriate therapy. Long-term outlook depends on coronary disease severity and treatment.",
+    "prevention": [
+      "Control hypertension, diabetes, and hyperlipidemia",
+      "Smoking cessation",
+      "Regular physical activity as approved by cardiology"
+    ],
+    "warning_signs": [
+      "Chest pain at rest or lasting >15 minutes",
+      "Pain radiating to arm, jaw, or back with sweating or nausea",
+      "Syncope or severe shortness of breath with chest pain",
+      "Sudden increase in angina frequency or severity"
+    ],
+    "patient_education": [
+      "Chest pain may indicate a heart attack — call emergency services when severe or persistent",
+      "This educational summary is not a substitute for urgent cardiac assessment",
+      "Risk factors should be managed lifelong"
+    ]
+  }
+]
