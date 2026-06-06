@@ -8,11 +8,25 @@ from asset_loader import load_all_assets
 from clinical import init_clinical_db
 from env_config import load_project_env
 from model_loader import registry
+from study import init_study_db
 
 logger = logging.getLogger(__name__)
 
 _rag: Any = None
 _rag_error: str | None = None
+
+
+def init_fast_services() -> None:
+    """Lightweight init so study/clinical APIs respond immediately."""
+    load_project_env()
+    try:
+        init_clinical_db()
+    except Exception as exc:
+        logger.warning("[Startup] Clinical DB init failed: %s", exc)
+    try:
+        init_study_db()
+    except Exception as exc:
+        logger.warning("[Startup] Study DB init failed: %s", exc)
 
 
 def get_rag():
@@ -51,15 +65,8 @@ def init_rag_on_first_use() -> None:
         logger.warning("[Startup] RAG unavailable: %s", exc)
 
 
-def run_startup() -> dict[str, Any]:
-    """Sync startup pipeline — safe to call from a worker thread."""
-    load_project_env()
-
-    try:
-        init_clinical_db()
-    except Exception as exc:
-        logger.warning("[Startup] Clinical DB init failed: %s", exc)
-
+def run_heavy_startup() -> dict[str, Any]:
+    """Load CNN weights and warm RAG — safe to run in a background thread."""
     try:
         load_all_assets()
     except Exception as exc:
@@ -76,8 +83,13 @@ def run_startup() -> dict[str, Any]:
 
     init_rag_on_first_use()
 
-    return {"models": status, "loaded": loaded, "total": len(status)}
+    return {"models": status, "loaded": loaded, "total": len(status), "status": "ready"}
+
+
+async def run_heavy_startup_async() -> dict[str, Any]:
+    return await asyncio.to_thread(run_heavy_startup)
 
 
 async def run_startup_async() -> dict[str, Any]:
-    return await asyncio.to_thread(run_startup)
+    """Backward-compatible alias."""
+    return await run_heavy_startup_async()

@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import asyncio
 import logging
 
 from env_config import load_project_env
@@ -16,7 +17,8 @@ from symptom_checker import check_symptoms
 from clinical.schemas import DiseaseLookupRequest
 from clinical.db import get_disease_by_slug, list_disease_slugs
 from clinical.service import get_or_generate_profile
-from startup import get_rag, rag_status, run_startup_async
+from study.routes import router as study_router
+from startup import get_rag, init_fast_services, rag_status, run_heavy_startup_async
 
 load_project_env()
 
@@ -41,13 +43,23 @@ gradcam_manager = GradCAMManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    logger.info("Starting MedAI backend...")
+    logger.info("Starting MedAI backend (fast init)...")
+    init_fast_services()
+    app.state.startup = {"status": "loading", "models": {}, "loaded": 0, "total": 8}
 
-    startup_info = await run_startup_async()
-    app.state.startup = startup_info
+    async def load_heavy_services() -> None:
+        try:
+            app.state.startup = await run_heavy_startup_async()
+            logger.info("MedAI backend fully ready.")
+        except Exception as exc:
+            logger.exception("[Startup] Heavy init failed: %s", exc)
+            app.state.startup = {"status": "error", "error": str(exc)}
+
+    heavy_task = asyncio.create_task(load_heavy_services())
 
     yield
 
+    heavy_task.cancel()
     logger.info("Shutting down...")
 
 # ───────────────────────────────────────────────────────────
@@ -71,6 +83,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(study_router)
 
 # ───────────────────────────────────────────────────────────
 # Helpers
@@ -123,6 +137,7 @@ async def health():
 
     status = registry.status()
     rag_ready, rag_error = rag_status()
+    startup = getattr(app.state, "startup", {}) or {}
 
     return {
         "status": "ok",
@@ -132,6 +147,7 @@ async def health():
         "total": len(status),
         "rag_ready": rag_ready,
         "rag_error": rag_error,
+        "startup_status": startup.get("status", "unknown"),
     }
 
 

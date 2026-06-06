@@ -1,6 +1,13 @@
 import axios from 'axios';
 import { ClassificationResult, RAGResponse, SymptomResult, AutoClassifyResult, TopKItem } from '../types';
 import { DiseaseProfile, SymptomCheckResult } from '../types/clinical';
+import {
+  AssessmentResult,
+  ChatMessage,
+  QuizQuestion,
+  StudyAnalytics,
+  StudyBook,
+} from '../types/study';
 
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const api = axios.create({ baseURL: BASE, timeout: 30000 });
@@ -68,6 +75,81 @@ export const fetchClinicalProfile = async (
     timeout: 60000,
   });
   return data;
+};
+
+// ── Study Companion ───────────────────────────────────────────
+const studyApi = axios.create({ baseURL: BASE, timeout: 60000 });
+
+export const checkBackendHealth = async (): Promise<boolean> => {
+  try {
+    await axios.get(`${BASE}/health`, { timeout: 8000 });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const listStudyBooks = async (): Promise<StudyBook[]> => {
+  const { data } = await studyApi.get('/study/books', { timeout: 15000 });
+  return data.books ?? [];
+};
+
+export const getStudyBook = async (bookId: string): Promise<StudyBook> => {
+  const { data } = await studyApi.get(`/study/books/${bookId}`);
+  return data;
+};
+
+export const uploadStudyBook = async (file: File) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  const { data } = await studyApi.post('/study/books/upload', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 90000,
+  });
+  return data as { book_id: string; title: string; status: string; message: string };
+};
+
+export const deleteStudyBook = async (bookId: string) => {
+  await studyApi.delete(`/study/books/${encodeURIComponent(bookId)}`);
+};
+
+export const chatWithBook = async (
+  bookId: string,
+  message: string,
+  history: ChatMessage[],
+  chapterId?: string,
+) => {
+  const { data } = await studyApi.post(`/study/books/${bookId}/chat`, {
+    message,
+    history,
+    chapter_id: chapterId || null,
+  });
+  return data as { answer: string; citations: ChatMessage['citations']; disclaimer: string };
+};
+
+export const generateBookQuiz = async (bookId: string, config: Record<string, unknown>) => {
+  const { data } = await studyApi.post(`/study/books/${bookId}/quiz/generate`, config);
+  return data as { attempt_id: string; questions: QuizQuestion[]; disclaimer: string };
+};
+
+export const generateBookExam = async (bookId: string, config: Record<string, unknown>) => {
+  const { data } = await studyApi.post(`/study/books/${bookId}/exam/generate`, config);
+  return data as { attempt_id: string; questions: QuizQuestion[]; time_limit_minutes: number; disclaimer: string };
+};
+
+export const submitBookAssessment = async (bookId: string, payload: Record<string, unknown>) => {
+  const { data } = await studyApi.post(`/study/books/${bookId}/assessment/submit`, payload);
+  return data as AssessmentResult;
+};
+
+export const fetchStudyAnalytics = async (bookId: string): Promise<StudyAnalytics> => {
+  const { data } = await studyApi.get(`/study/books/${bookId}/analytics`);
+  return data;
+};
+
+export const runStudyTool = async (bookId: string, tool: string, payload: Record<string, unknown>) => {
+  const { data } = await studyApi.post(`/study/books/${bookId}/tools/${tool}`, payload);
+  return data as { tool: string; content: string; disclaimer: string };
 };
 
 // ── Wikipedia ─────────────────────────────────────────────────
