@@ -36,6 +36,54 @@ Structured answers on anatomy, physiology, diseases, and treatments with sidebar
 
 ![Medical Knowledge Base — Mistral RAG Q&A](docs/screenshots/knowledge-base.png)
 
+### Symptom Checker
+
+Describe symptoms in plain language and receive a **ranked differential diagnosis** powered by ChromaDB retrieval and Mistral LLM. Each condition opens an interactive clinical education panel with urgency levels, disease overview, management guidance, diagnostics, and red-flag warning signs.
+
+**Example case:** *fever, dry cough, shortness of breath, fatigue* — a classic respiratory presentation. The checker evaluates these against indexed clinical knowledge and returns overlapping differentials common in viral and bacterial lower-respiratory illness, including **COVID-19**, **Influenza**, **Community-Acquired Pneumonia**, **Acute Bronchitis**, **RSV infection**, and **Atypical Pneumonia** (e.g. *Mycoplasma*). Results are for **educational use only** — not confirmed diagnoses.
+
+#### 1. Symptom input
+
+Enter free-text symptoms or pick from example cases. The NLP layer tokenizes input into analyzable symptom tags before RAG retrieval.
+
+![Symptom Checker — input form with fever, dry cough, shortness of breath, and fatigue](docs/screenshots/symptom-checker-input.png)
+
+#### 2. Differential diagnosis results
+
+After analysis, the system returns a ranked list of possible conditions with **urgency badges** (Low / Medium / High). COVID-19 (SARS-CoV-2) is surfaced first for this symptom cluster, with hallmark features such as loss of taste/smell and recent exposure noted alongside the clinical summary.
+
+![Symptom Checker — ranked differential with COVID-19 and interactive clinical panels](docs/screenshots/symptom-checker-differential.png)
+
+#### 3. Disease overview (COVID-19 panel)
+
+Expanding a diagnosis reveals structured education content: severity grading, pathophysiology (respiratory and systemic illness from SARS-CoV-2), underlying cause (droplet/aerosol transmission), expected recovery timeline, and first-line management including supportive care, antiviral eligibility, and oxygen monitoring for severe cases.
+
+![Symptom Checker — COVID-19 disease overview, cause, recovery, and first-line management](docs/screenshots/symptom-checker-covid-overview.png)
+
+#### 4. Supportive care & medications
+
+Interactive panels cover home guidance (hydration, rest, pulse oximetry, isolation) and **educational** medication categories — antivirals, antipyretics, and bronchodilators — each with appropriate caveats that prescribing requires clinical assessment.
+
+![Symptom Checker — supportive care, home guidance, and medication categories](docs/screenshots/symptom-checker-supportive-care.png)
+
+#### 5. Diagnostics, prevention & warning signs
+
+Further panels list confirmatory tests (RT-PCR, rapid antigen, chest imaging when pneumonia is suspected), prevention measures (vaccination, ventilation, hand hygiene), patient education on long COVID, and **red-flag symptoms** requiring urgent care (severe dyspnea, chest pain, confusion, low SpO₂).
+
+![Symptom Checker — diagnostic tests, prevention, and urgent warning signs](docs/screenshots/symptom-checker-diagnostics-prevention.png)
+
+#### 6. Additional ranked conditions
+
+The differential continues with other matches from the same symptom set. **Influenza** is flagged as low urgency (sudden onset, body aches). **Community-Acquired Pneumonia** is flagged as **high urgency** due to productive cough, chest pain, and consolidation signs — illustrating how the checker stratifies risk across similar presentations.
+
+![Symptom Checker — Influenza and Community-Acquired Pneumonia with urgency levels](docs/screenshots/symptom-checker-ranked-conditions.png)
+
+#### 7. Extended differential list
+
+Lower-ranked matches complete the educational differential: **Acute Bronchitis** (persistent post-viral cough), **RSV** (wheezing, higher risk in children and older adults), and **Atypical Pneumonia** (gradual onset, dry cough, headache). A disclaimer reinforces that listed conditions are possibilities, not confirmed diagnoses.
+
+![Symptom Checker — Acute Bronchitis, RSV, and Atypical Pneumonia with disclaimer](docs/screenshots/symptom-checker-additional-matches.png)
+
 ### Imaging Quiz
 
 Test diagnostic skills against the same models used in Detection — organ identification, chest pathology, and brain tumor cases with live accuracy tracking.
