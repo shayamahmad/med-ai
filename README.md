@@ -1,299 +1,225 @@
 # MedAI — Medical AI Learning Platform
 
-A full-stack medical AI platform featuring 8 specialized CNN models, RAG-powered clinical tutoring, Grad-CAM explainability, symptom checking, and interactive 3D anatomy visualization.
+**Clinical intelligence powered by deep learning** — a full-stack platform for medical imaging, explainable AI, RAG tutoring, symptom checking, textbook study, and interactive 3D anatomy.
 
-**Live Demo:** `http://16.170.204.191/`  
+![MedAI home — Clinical Intelligence Powered by Deep Learning](docs/screenshots/home.png)
 
+> 8 specialized CNN models · RAG clinical tutoring · Grad-CAM explainability · Study Companion · Interactive 3D anatomy
 
 ---
 
-## Tech Stack
+## Overview
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, TypeScript, Three.js, Tailwind CSS |
-| Backend | FastAPI, PyTorch, Python 3.11 |
-| ML Models | ResNet50, DenseNet121, EfficientNetB0, ResNet34 |
-| RAG System | ChromaDB, Mistral AI, Sentence Transformers |
-| Storage | Hugging Face Hub (models + assets) |
-| Deployment | Docker, Docker Compose (any VPS) |
+MedAI combines computer vision and large-language-model retrieval into one medical learning dashboard. Upload chest X-rays, brain MRIs, skin lesions, and more to get instant predictions with **Grad-CAM heatmaps** that show where the model looked. Ask clinical questions through a **ChromaDB + Mistral RAG** pipeline backed by 88K+ indexed medical chunks. Upload your own textbooks for **per-book chat, quizzes, and exam mode**. Explore **23 real GLB anatomical models** in the browser with Three.js.
 
-### Storage & cost (AWS replaced)
+Built for students, researchers, and anyone learning radiology, pathology, and physiology — **not for clinical diagnosis**.
 
-| Service | Typical cost for this project (~5–15 GB assets) | Notes |
-|--------|--------------------------------------------------|--------|
-| **Hugging Face Hub** (used here) | **$0/mo** public dataset | Free storage + bandwidth for public repos. One env var. Best for ML files. |
-| AWS S3 + EC2 (old setup) | **~$15–40+/mo** | S3 storage + egress + EC2 instance; IAM keys; easy to overspend on egress |
-| Cloudflare R2 | ~$0.08–0.23/mo storage | Cheaper than S3, no egress fees; still needs setup + S3-compatible code |
-| Google Drive / Dropbox | $0–3/mo | Poor fit for automated app downloads |
+---
 
-**Mistral API** (RAG / tutor only): pay-as-you-go, e.g. `mistral-small` ~$0.25 per 1M input tokens — not included in HF storage.
+## Screenshots
+
+### Disease Detection & Grad-CAM
+
+Upload a scan, run inference, and inspect class probabilities alongside a gradient-weighted activation map.
+
+![Brain MRI detection with Grad-CAM explainability](docs/screenshots/detection-gradcam.png)
+
+### AI Medical Tutor
+
+Conversational tutoring powered by ChromaDB retrieval and Mistral LLM — ask about radiology, pathology, and clinical imaging.
+
+![AI Medical Tutor — RAG chat interface](docs/screenshots/ai-tutor.png)
+
+### Medical Knowledge Base
+
+Structured answers on anatomy, physiology, diseases, and treatments with sidebar shortcuts for organs, diseases, and topics.
+
+![Medical Knowledge Base — Mistral RAG Q&A](docs/screenshots/knowledge-base.png)
+
+### Imaging Quiz
+
+Test diagnostic skills against the same models used in Detection — organ identification, chest pathology, and brain tumor cases with live accuracy tracking.
+
+![Knowledge Quiz — Imaging Quiz with AI comparison](docs/screenshots/imaging-quiz.png)
+
+### Study Companion
+
+Upload PDF or text textbooks, index them into per-book vector stores, then chat with citations, generate quizzes, run timed exams, and review analytics.
+
+![Study Companion — Chat with Book and chapter citations](docs/screenshots/study-companion.png)
+
+### 3D Anatomy Viewer
+
+Rotate, zoom, and pan 23 medical GLB models filtered by body system — heart, lungs, brain, and more.
+
+![3D Anatomy Viewer — Three.js GLTF models](docs/screenshots/3d-viewer.png)
 
 ---
 
 ## Features
 
-### Disease Detection (7 CNN Models)
-| Scan Type | Model | Classes |
-|---|---|---|
+| Module | What it does |
+|--------|----------------|
+| **Detection** | 7 CNN models — chest X-ray, brain MRI, eye fundus, skin lesion, bone X-ray, knee MRI, dental X-ray |
+| **Classify** | 14-class organ classifier + auto pipeline (organ → disease model) |
+| **Grad-CAM** | Visual explainability heatmap on every prediction |
+| **AI Tutor** | RAG chat over indexed clinical documents (ChromaDB + Mistral) |
+| **Knowledge Base** | Broad medical Q&A with organ/disease/topic shortcuts |
+| **Symptom Checker** | Structured differential diagnosis with expandable treatment panels |
+| **Imaging Quiz** | Gamified diagnostic assessment vs. AI predictions |
+| **Study Companion** | Upload textbooks · RAG chat · quiz/exam from your book · analytics |
+| **3D Viewer** | Interactive WebGL anatomy (Three.js + GLTFLoader) |
+
+### Detection models
+
+| Scan type | Architecture | Output classes |
+|-----------|--------------|----------------|
 | Chest X-Ray | DenseNet121 | COVID-19, Pneumonia, TB, Lung Opacity, Normal |
 | Brain MRI | ResNet50 | Glioma, Meningioma, No Tumor, Pituitary |
 | Eye Fundus | ResNet50 | 9 ocular conditions |
-| Skin Lesion | EfficientNetB0 | 7 classes — HAM10000 |
+| Skin Lesion | EfficientNetB0 | 7 classes (HAM10000) |
 | Bone X-Ray | ResNet34 | Fractured, Normal |
-| Knee MRI | ResNet50 | KL Grade 0–4 (Osteoarthritis) |
+| Knee MRI | ResNet50 | KL Grade 0–4 (osteoarthritis) |
 | Dental X-Ray | ResNet50 | 6 dental pathology classes |
-
-### Other Features
-- **Organ Classifier** — ResNet50, 14 organ classes
-- **Auto Pipeline** — detects organ → routes to disease model automatically
-- **Grad-CAM** — visual explainability heatmaps for every prediction
-- **RAG AI Tutor** — ChromaDB + Mistral LLM, 88K+ medical document chunks
-- **Symptom Checker** — clinical differential diagnosis via Mistral RAG
-- **Medical Knowledge Base** — ask any anatomy/pathology/physiology question
-- **3D Anatomy Viewer** — real GLB models via Three.js GLTFLoader
-- **Diagnostic Quiz** — test your medical imaging knowledge
 
 ---
 
-## Project Structure
+## Tech stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, TypeScript, Three.js, Tailwind CSS |
+| Backend | FastAPI, PyTorch, Python 3.11+ |
+| ML models | ResNet50, DenseNet121, EfficientNetB0, ResNet34 |
+| RAG | ChromaDB, Mistral AI, Sentence Transformers |
+| Study indexing | Per-book ChromaDB collections, PDF/TXT chunking |
+| Clinical data | SQLite (`backend/data/clinical.db`) |
+| Asset hosting | Hugging Face Hub (models + medical PDFs) |
+| Deployment | Docker Compose |
+
+**Mistral API** (tutor, symptom checker, study chat/quiz): pay-as-you-go — e.g. `mistral-small` ~$0.25 per 1M input tokens.
+
+---
+
+## Quick start (Windows)
+
+```powershell
+git clone https://github.com/shayamahmad/med-ai.git
+cd med-ai
+
+# One-time setup (venv, npm install, optional HF asset download)
+npm run setup
+
+# Add your Mistral key to .env
+copy .env.example .env
+# Edit .env → MISTRAL_API_KEY=...
+
+# Start backend + frontend
+npm start
+```
+
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- Backend API: [http://localhost:8000](http://localhost:8000)
+- Swagger docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+Wait for the backend health check before using Study Companion or RAG features. Large textbooks (e.g. Guyton) may take several minutes to index.
+
+### Environment variables
+
+Create `.env` in the project root:
+
+```env
+MISTRAL_API_KEY=your_mistral_key_here
+HF_ASSETS_REPO=your-username/medai-assets
+REACT_APP_API_URL=http://localhost:8000
+REACT_APP_HF_ASSETS_REPO=your-username/medai-assets
+```
+
+See [`.env.example`](.env.example) for the full list.
+
+---
+
+## Project structure
 
 ```
-AI Doctor Help/
+med-ai/
 ├── backend/
-│   ├── main.py               # FastAPI app, 18 routes
-│   ├── model_loader.py       # Singleton model registry
-│   ├── image_utils.py        # Preprocessing + inference
-│   ├── gradcam.py            # Grad-CAM implementation
-│   ├── rag_system.py         # ChromaDB + Mistral RAG
-│   ├── symptom_checker.py    # Symptom → RAG pipeline
-│   └── ingest.py             # PDF/TXT → ChromaDB ingestion
+│   ├── main.py                 # FastAPI app
+│   ├── startup.py              # Fast init + background model/RAG loading
+│   ├── model_loader.py         # CNN model registry
+│   ├── gradcam.py              # Grad-CAM heatmaps
+│   ├── rag_system.py           # ChromaDB + Mistral RAG
+│   ├── symptom_checker.py      # Symptom → structured diagnosis
+│   ├── clinical/               # Disease DB + treatment panels API
+│   └── study/                  # Study Companion (upload, RAG, quiz, exam)
 ├── medai-frontend/
-│   ├── public/
-│   │   └── models/           # GLB 3D organ models
 │   └── src/
-│       ├── pages/            # 8 page components
-│       ├── components/       # Navbar, ImageUploader, ConfidenceBar
-│       ├── api/              # Axios API client
-│       └── types/            # TypeScript interfaces
-├── models/                   # Trained .pth files (local or Hugging Face)
-├── Dockerfile.backend
-├── Dockerfile.frontend
+│       ├── pages/              # Home, Detection, Tutor, Quiz, Viewer3D, …
+│       ├── components/study/   # Study Companion UI
+│       └── api/                # Axios API client
+├── docs/screenshots/           # README preview images
+├── scripts/                    # setup.ps1, start.ps1, HF asset scripts
 ├── docker-compose.yml
 └── README.md
 ```
 
 ---
 
-## Local Development
-
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- CUDA GPU (optional, CPU works too)
-- Hugging Face account (free — for hosting model files)
-
-### Backend Setup
-
-```bash
-# Create conda environment
-conda create -n medrag python=3.11
-conda activate medrag
-
-# Install dependencies
-cd "AI Doctor Help"
-pip install -r requirements.txt
-
-# Set environment variables
-cp .env.example .env
-# Edit .env with your keys
-
-# Ingest documents into ChromaDB
-python -m backend.ingest
-
-# Start backend
-uvicorn backend.main:app --reload --port 8000
-```
-
-### Frontend Setup
-
-```bash
-cd medai-frontend
-npm install
-npm start
-# Opens at http://localhost:3000
-```
-
-### Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-# Mistral AI
-MISTRAL_API_KEY=your_mistral_key_here
-
-# Hugging Face (models, ChromaDB, medical PDFs)
-HF_ASSETS_REPO=your-username/medai-assets
-# HF_TOKEN=hf_...          # only for private repos
-
-# Backend URL (for frontend)
-REACT_APP_API_URL=http://localhost:8000
-```
-
-### Host assets on Hugging Face (one-time, free)
-
-1. Create a dataset: [huggingface.co/new-dataset](https://huggingface.co/new-dataset) → `your-username/medai-assets`
-2. If migrating from AWS, download `models/`, `chromadb/`, `medical_sources/` from S3 once, then:
-
-```bash
-huggingface-cli login
-npm run upload:assets -- your-username/medai-assets
-```
-
-3. In `.env`:
-
-```env
-HF_ASSETS_REPO=your-username/medai-assets
-REACT_APP_HF_ASSETS_REPO=your-username/medai-assets
-```
-
-4. Download locally: `npm run download:assets` — backend auto-syncs on startup.
-
----
-
-## Docker Deployment
-
-### Build and Run
-
-```bash
-# Build both images
-docker-compose build
-
-# Start all services
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f backend
-docker-compose logs -f frontend
-
-# Stop
-docker-compose down
-```
-
-### docker-compose.yml
-
-```yaml
-version: '3.8'
-
-services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: ./medai-frontend
-      dockerfile: Dockerfile.frontend
-    ports:
-      - "3000:80"
-    environment:
-      - REACT_APP_API_URL=http://<your-ec2-ip>:8000
-    depends_on:
-      - backend
-    restart: unless-stopped
-```
-
----
-
-## Deploy anywhere (no AWS required)
-
-Use any cheap VPS (Hetzner, DigitalOcean, Oracle free tier) + Docker — no S3 or EC2 lock-in.
-
-## VPS / Cloud Deployment
-
-### Instance Setup
-
-```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install Docker
-sudo apt install docker.io docker-compose -y
-sudo usermod -aG docker ubuntu
-newgrp docker
-
-# Clone repository
-git clone <your-repo-url>
-cd "AI Doctor Help"
-
-# Set environment variables
-nano .env
-
-# Deploy
-docker-compose up -d
-```
-
-### Firewall — open these ports
-
-| Port | Purpose |
-|---|---|
-| 22 | SSH |
-| 8000 | FastAPI backend |
-| 3000 | React frontend |
-| 80 | HTTP (optional) |
-| 443 | HTTPS (optional) |
-
----
-
-## API Endpoints
+## API highlights
 
 | Method | Endpoint | Description |
-|---|---|---|
+|--------|----------|-------------|
 | GET | `/health` | System health + model status |
-| POST | `/classify/organ` | Organ classification (14 classes) |
-| POST | `/classify/chest` | Chest X-ray disease detection |
-| POST | `/classify/brain` | Brain MRI tumor classification |
-| POST | `/classify/eye` | Eye disease classification |
-| POST | `/classify/skin` | Skin lesion classification |
-| POST | `/classify/bone` | Bone fracture detection |
-| POST | `/classify/knee` | Knee OA grading |
-| POST | `/classify/dental` | Dental pathology |
+| POST | `/classify/*` | Organ + disease classification (7 modalities) |
 | POST | `/classify/auto` | Auto organ → disease pipeline |
 | POST | `/explain/gradcam` | Grad-CAM heatmap |
-| POST | `/rag/query` | RAG medical Q&A |
-| POST | `/symptom-check` | Symptom differential diagnosis |
+| POST | `/rag/query` | Medical knowledge base Q&A |
+| POST | `/symptom-check` | Structured differential diagnosis |
+| GET | `/clinical/diseases` | Clinical disease library |
+| GET | `/study/books` | Study Companion library |
+| POST | `/study/books/upload` | Upload textbook (PDF, TXT, MD) |
+| POST | `/study/books/{id}/chat` | RAG chat with book citations |
+| POST | `/study/books/{id}/quiz` | Generate quiz from book |
+| POST | `/study/books/{id}/exam` | Timed exam mode |
 
-Full interactive docs at `/docs` (Swagger UI).
+Full interactive docs at `/docs`.
 
 ---
 
-## Trained Models
+## Docker deployment
 
-| Model | Architecture | Dataset | Classes | Notes |
-|---|---|---|---|---|
-| organ_model_v2 | ResNet50 | Multi-organ | 14 | Custom head with BatchNorm |
-| chest_model | DenseNet121 | COVID-19 Radiography | 5 | Transfer learning |
-| brain_model | ResNet50 | Br35H + Figshare | 4 | Dropout regularization |
-| eye_model | ResNet50 | ODIR-5K | 9 | Multi-label |
-| skin_model | EfficientNetB0 | HAM10000 | 7 | Custom normalization |
-| bone_model | ResNet34 | MURA Dataset | 2 | Binary classifier |
-| knee_model | ResNet50 | OAI + Kaggle KL | 5 | KL grading scale |
-| dental_model | ResNet50 | Dental Panoramic | 6 | Transfer learning |
+```bash
+docker-compose build
+docker-compose up -d
+```
+
+Backend on port **8000**, frontend on port **3000**. Set `REACT_APP_API_URL` to your server IP in `docker-compose.yml`.
+
+---
+
+## Trained models
+
+| Model | Architecture | Dataset | Classes |
+|-------|--------------|---------|---------|
+| organ_model_v2 | ResNet50 | Multi-organ | 14 |
+| chest_model | DenseNet121 | COVID-19 Radiography | 5 |
+| brain_model | ResNet50 | Br35H + Figshare | 4 |
+| eye_model | ResNet50 | ODIR-5K | 9 |
+| skin_model | EfficientNetB0 | HAM10000 | 7 |
+| bone_model | ResNet34 | MURA | 2 |
+| knee_model | ResNet50 | OAI + Kaggle KL | 5 |
+| dental_model | ResNet50 | Dental Panoramic | 6 |
+
+Models and assets can be hosted on [Hugging Face Hub](https://huggingface.co) (free for public datasets). Use `npm run download:assets` after setting `HF_ASSETS_REPO`.
 
 ---
 
 ## Disclaimer
 
-This platform is for **educational and research purposes only**. It is not intended for clinical use, medical diagnosis, or treatment decisions. Always consult a qualified medical professional.
+This platform is for **educational and research purposes only**. It is not intended for clinical use, medical diagnosis, or treatment decisions. AI-generated quizzes and chat responses may contain errors — always verify with textbooks and qualified instructors.
 
 ---
 
 ## License
 
-MIT License — free to use, modify, and distribute.
+[MIT License](LICENSE) — free to use, modify, and distribute.
