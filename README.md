@@ -36,6 +36,12 @@ Structured answers on anatomy, physiology, diseases, and treatments with sidebar
 
 ![Medical Knowledge Base — Mistral RAG Q&A](docs/screenshots/knowledge-base.png)
 
+### Symptom Checker
+
+Enter symptoms and receive a ranked differential diagnosis with match scores, urgency levels, and expandable clinical panels — presentation, management, diagnostics, prevention, and warning signs.
+
+![Symptom Checker — structured differential diagnosis with clinical panels](docs/screenshots/symptom-checker.png)
+
 ### Imaging Quiz
 
 Test diagnostic skills against the same models used in Detection — organ identification, chest pathology, and brain tumor cases with live accuracy tracking.
