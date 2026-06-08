@@ -19,6 +19,7 @@ from clinical.db import get_disease_by_slug, list_disease_slugs
 from clinical.service import get_or_generate_profile
 from cds.schemas import CDSReportRequest
 from cds.service import generate_imaging_cds_report
+from lifestyle.routes import router as lifestyle_router
 from study.routes import router as study_router
 from startup import get_rag, init_fast_services, mistral_configured, rag_status, run_heavy_startup_async
 
@@ -96,6 +97,7 @@ app.add_middleware(
 )
 
 app.include_router(study_router)
+app.include_router(lifestyle_router)
 
 # ───────────────────────────────────────────────────────────
 # Helpers

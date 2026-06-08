@@ -60,9 +60,9 @@ const SymptomChecker: React.FC = () => {
         <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 'clamp(2.4rem, 5vw, 3.5rem)', fontWeight: 900, letterSpacing: -2.5, color: TEXT, marginBottom: 14, lineHeight: 1 }}>
           Symptom Checker
         </h1>
-        <p style={{ color: DIM, fontSize: 18, maxWidth: 640, lineHeight: 1.7 }}>
-          Describe your symptoms for an AI differential diagnosis, then open any condition
-          to explore an interactive clinical education panel.
+        <p style={{ color: DIM, fontSize: 18, maxWidth: 680, lineHeight: 1.7 }}>
+          Describe symptoms for a differential diagnosis, review clinical guidance for any condition,
+          then receive personalized diet and lifestyle recommendations.
         </p>
       </div>
 
@@ -190,9 +190,10 @@ const SymptomChecker: React.FC = () => {
             <div className="mono-label" style={{ marginBottom: 16 }}>How It Works</div>
             {[
               ['01', 'Enter symptoms',    'Type or select from examples'],
-              ['02', 'ChromaDB retrieval','Searches medical knowledge base'],
-              ['03', 'Mistral LLM',       'Builds ranked differential list'],
-              ['04', 'Clinical panels',   'Tap any diagnosis for treatment guide'],
+              ['02', 'Disease detection', 'Ranked differential diagnosis'],
+              ['03', 'Clinical guidance', 'Expand any condition for care info'],
+              ['04', 'Diet & lifestyle',  'Personalized nutrition plan'],
+              ['05', 'Follow-up',         'Monitoring and adherence tips'],
             ].map(([num, title, desc]) => (
               <div key={num} style={{ display: 'flex', gap: 14, marginBottom: 16, alignItems: 'flex-start' }}>
                 <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: ACCENT, flexShrink: 0, marginTop: 2 }}>{num}</span>

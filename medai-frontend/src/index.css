@@ -290,6 +290,152 @@
   padding: 0 14px 14px;
 }
 
+/* ── SYMPTOM WORKFLOW & DIET/LIFESTYLE ───────── */
+.symptom-workflow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(0, 229, 255, 0.04);
+  border: 1px solid rgba(0, 229, 255, 0.12);
+}
+.symptom-workflow__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 120px;
+  position: relative;
+  padding-right: 8px;
+}
+.symptom-workflow__dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 8, 20, 0.8);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  color: rgba(180, 220, 240, 0.6);
+  flex-shrink: 0;
+}
+.symptom-workflow__step--active .symptom-workflow__dot {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: rgba(0, 229, 255, 0.5);
+  color: #00e5ff;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+}
+.symptom-workflow__step--done .symptom-workflow__dot {
+  background: rgba(0, 230, 118, 0.12);
+  border-color: rgba(0, 230, 118, 0.4);
+  color: #00e676;
+}
+.symptom-workflow__label {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
+  color: rgba(180, 220, 240, 0.65);
+  line-height: 1.3;
+}
+.symptom-workflow__step--active .symptom-workflow__label {
+  color: #d0e4f0;
+  font-weight: 600;
+}
+.lifestyle-intake__header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+}
+.lifestyle-intake__section {
+  margin-bottom: 20px;
+  padding: 18px;
+  border-radius: 12px;
+  background: rgba(0, 8, 20, 0.45);
+  border: 1px solid rgba(0, 229, 255, 0.08);
+}
+.lifestyle-intake__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+@media (max-width: 720px) {
+  .lifestyle-intake__grid { grid-template-columns: 1fr; }
+  .symptom-workflow__step { min-width: 100%; }
+}
+.lifestyle-label {
+  display: block;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(0, 229, 255, 0.7);
+  margin-bottom: 8px;
+}
+.lifestyle-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lifestyle-chip {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  background: rgba(0, 8, 20, 0.55);
+  color: rgba(180, 220, 240, 0.8);
+  font-size: 13px;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.lifestyle-chip:hover {
+  border-color: rgba(0, 229, 255, 0.35);
+}
+.lifestyle-chip--active {
+  border-color: rgba(0, 229, 255, 0.5);
+  background: rgba(0, 229, 255, 0.1);
+  color: #d0e4f0;
+}
+.lifestyle-intake__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+.lifestyle-report {
+  margin-top: 8px;
+}
+.lifestyle-report__hero {
+  margin-bottom: 18px;
+  padding: 20px;
+  border-radius: 12px;
+  background: rgba(0, 230, 118, 0.04);
+  border: 1px solid rgba(0, 230, 118, 0.15);
+}
+.lifestyle-rationale-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lifestyle-rationale-item {
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 229, 255, 0.1);
+  background: rgba(0, 229, 255, 0.03);
+}
+.lifestyle-followup-block {
+  margin-top: 18px;
+  padding: 20px;
+  border-radius: 12px;
+  background: rgba(180, 120, 255, 0.05);
+  border: 1px solid rgba(180, 120, 255, 0.18);
+}
+
 .clinical-panel {
   border: 1px solid rgba(0, 229, 255, 0.15);
   border-radius: 14px;

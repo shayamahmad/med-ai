@@ -9,6 +9,11 @@ import {
   StudyBook,
 } from '../types/study';
 import { CDSReport, CDSReportRequest } from '../types/cds';
+import {
+  ConditionContext,
+  DietLifestyleProfile,
+  DietLifestyleReport,
+} from '../types/lifestyle';
 
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const api = axios.create({ baseURL: BASE, timeout: 30000 });
@@ -81,6 +86,14 @@ export const fetchClinicalProfile = async (
     params: { name, generate: true },
     timeout: 60000,
   });
+  return data;
+};
+
+export const generateDietLifestyleReport = async (
+  condition: ConditionContext,
+  profile: DietLifestyleProfile,
+): Promise<{ report: DietLifestyleReport; generated_at: string }> => {
+  const { data } = await axios.post(`${BASE}/lifestyle/recommendations`, { condition, profile }, { timeout: 120000 });
   return data;
 };
 
