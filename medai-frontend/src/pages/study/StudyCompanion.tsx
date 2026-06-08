@@ -65,6 +65,7 @@ const StudyCompanion: React.FC = () => {
   const [analytics, setAnalytics] = useState<StudyAnalytics | null>(null);
 
   const selectedBook = books.find(b => b.id === selectedId) ?? null;
+  const selectedChapter = selectedBook?.chapters.find(ch => ch.id === chapterFilter) ?? null;
 
   const refreshBooks = useCallback(async () => {
     const online = await checkBackendHealth();
@@ -193,6 +194,7 @@ const StudyCompanion: React.FC = () => {
           difficulty: 'mixed',
           question_types: ['mcq', 'true_false'],
           chapter_ids: chapterFilter ? [chapterFilter] : [],
+          topics: selectedChapter ? [selectedChapter.title] : [],
         });
         setQuestions(res.questions);
         setAttemptId(res.attempt_id);
@@ -422,6 +424,18 @@ const StudyCompanion: React.FC = () => {
                   ? 'Creates MCQ and true/false questions with instant feedback and topic analysis.'
                   : 'Creates a balanced mock exam with detailed performance report.'}
               </p>
+              {selectedChapter ? (
+                <p style={{ color: ACCENT, fontSize: 13, marginBottom: 16, lineHeight: 1.6 }}>
+                  Questions will be drawn from: <strong>{selectedChapter.title}</strong>
+                  {selectedChapter.start_page > 0 && (
+                    <span style={{ color: DIM }}> · pp. {selectedChapter.start_page}–{selectedChapter.end_page}</span>
+                  )}
+                </p>
+              ) : (
+                <p style={{ color: 'rgba(255,215,64,0.85)', fontSize: 13, marginBottom: 16, lineHeight: 1.6 }}>
+                  Select a chapter in the sidebar to generate questions from that section only.
+                </p>
+              )}
               {tab === 'exam' && (
                 <label style={{ display: 'block', marginBottom: 16, color: DIM, fontSize: 14 }}>
                   Time limit (minutes)
@@ -429,7 +443,7 @@ const StudyCompanion: React.FC = () => {
                     onChange={e => setExamMinutes(Number(e.target.value))} style={{ marginTop: 6 }} />
                 </label>
               )}
-              <button className="btn-cyan" disabled={assessmentLoading}
+              <button className="btn-cyan" disabled={assessmentLoading || !chapterFilter}
                 onClick={() => startAssessment(tab === 'quiz' ? 'quiz' : 'exam')}>
                 {assessmentLoading ? 'Generating…' : tab === 'quiz' ? 'Generate Quiz' : 'Start Exam Mode'}
               </button>
@@ -475,7 +489,7 @@ const StudyCompanion: React.FC = () => {
                   ['compare', 'Compare Topics'],
                 ].map(([tool, label]) => (
                   <button key={tool} className="btn-outline" disabled={toolLoading}
-                    onClick={() => runTool(tool, selectedBook.title)}>
+                    onClick={() => runTool(tool, selectedChapter?.title ?? selectedBook.title)}>
                     {label}
                   </button>
                 ))}

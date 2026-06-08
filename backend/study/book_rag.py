@@ -76,6 +76,32 @@ class BookRAG:
         except Exception:
             pass
 
+    def retrieve_chapter_chunks(self, chapter_id: str, limit: int = 20) -> list[dict]:
+        """Return a spread of chunks from one chapter (not semantic search)."""
+        if self.collection.count() == 0:
+            return []
+        res = self.collection.get(
+            where={"chapter_id": chapter_id},
+            include=["documents", "metadatas"],
+        )
+        docs = res.get("documents") or []
+        metas = res.get("metadatas") or []
+        if not docs:
+            return []
+
+        paired = list(zip(docs, metas))
+        paired.sort(key=lambda item: (item[1].get("page", 0), item[1].get("chunk_index", 0)))
+        if len(paired) <= limit:
+            selected = paired
+        else:
+            step = len(paired) / limit
+            selected = [paired[int(i * step)] for i in range(limit)]
+
+        chunks = []
+        for text, meta in selected:
+            chunks.append({"text": text, "metadata": meta, "score": 1.0})
+        return chunks
+
     def retrieve(
         self,
         query: str,
@@ -159,15 +185,55 @@ BOOK EXCERPTS:
         ]
         return {"answer": answer, "citations": citations, "disclaimer": DISCLAIMER}
 
+    def _merge_chunks(self, *chunk_lists: list[list[dict]]) -> list[dict]:
+        seen: set[str] = set()
+        merged: list[dict] = []
+        for chunk_list in chunk_lists:
+            for chunk in chunk_list:
+                key = chunk["text"][:120]
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append(chunk)
+        return merged
+
     def generate_questions(
         self,
         prompt: str,
         num_questions: int,
         chapter_filter: str | None = None,
+        chapter_title: str | None = None,
     ) -> list[dict]:
         self._require_mistral()
-        chunks = self.retrieve(prompt, n_results=12, chapter_id=chapter_filter)
-        context = self.build_context(chunks)
+        if chapter_filter:
+            search_query = (
+                f"{chapter_title or chapter_filter} key concepts definitions mechanisms "
+                "physiology pathophysiology clinical correlations exam review"
+            )
+            chunks = self._merge_chunks(
+                self.retrieve_chapter_chunks(chapter_filter, limit=18),
+                self.retrieve(search_query, n_results=10, chapter_id=chapter_filter),
+            )
+            if not chunks:
+                raise ValueError(
+                    f"No indexed content found for chapter '{chapter_title or chapter_filter}'. "
+                    "Try re-uploading the book or choose another chapter."
+                )
+            scope_rule = (
+                f"Every question MUST test content from the chapter \"{chapter_title or chapter_filter}\" ONLY. "
+                "Do NOT ask about textbook structure, preface, publication details, website links, "
+                "or generic 'textbook features'."
+            )
+            topic_hint = chapter_title or chapter_filter
+        else:
+            chunks = self.retrieve(
+                "medical physiology anatomy pathology key concepts definitions mechanisms exam",
+                n_results=14,
+            )
+            scope_rule = "Cover a balanced mix of chapters from the provided excerpts."
+            topic_hint = "book content"
+
+        context = self.build_context(chunks[:20])
         system = f"""You create medical exam questions strictly from the provided textbook excerpts.
 Return ONLY valid JSON:
 {{
@@ -179,13 +245,22 @@ Return ONLY valid JSON:
       "options": ["A", "B", "C", "D"],
       "correct_answer": "exact answer text or option letter",
       "explanation": "why this is correct based on the book",
-      "topic": "topic name",
-      "chapter": "chapter title",
+      "topic": "specific subtopic within the chapter",
+      "chapter": "{chapter_title or 'source chapter'}",
       "difficulty": "easy|medium|hard"
     }}
   ]
 }}
 Rules: educational only, no dosage questions, no patient-specific advice, {num_questions} questions.
+{scope_rule}
+Set each question's "topic" to a specific medical subtopic (never "Textbook Features" or similar).
+Set each question's "chapter" to "{topic_hint}" when a chapter scope is given.
+
+Question format rules (strict):
+- type "mcq": MUST include exactly 4 distinct, plausible answer choices in "options". Never use True/False as MCQ options.
+- type "true_false": use ONLY for declarative statements (not "What/How many..." questions). Set options to ["True", "False"].
+- type "short_answer": use for numeric values, measurements, counts, or fill-in answers. Set "options" to [] and put the exact expected value in "correct_answer".
+- If a question asks for a diameter, percentage, number, or specific value, use "short_answer" NOT "mcq" or "true_false".
 
 BOOK EXCERPTS:
 {context}"""

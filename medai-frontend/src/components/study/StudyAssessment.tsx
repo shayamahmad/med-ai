@@ -1,9 +1,54 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AssessmentResult, QuizQuestion } from '../../types/study';
+import { QuizQuestion } from '../../types/study';
 
 const TEXT = '#d0e4f0';
-const DIM = 'rgba(180,220,240,0.75)';
 const ACCENT = '#00e5ff';
+
+type InputMode = 'true_false' | 'mcq' | 'text';
+
+const NUMERIC_QUESTION = /\b(what is the|what are the|how many|how much|approximate|approx\.?|diameter|radius|volume|percentage|percent|rate|value|number of|amount of|size of|length of|width of|thickness of|concentration|calculate|compute|give the|state the|enter the)\b/i;
+
+function optionsAreTrueFalseOnly(options: string[]): boolean {
+  if (!options.length) return false;
+  return options.every(opt => /^(true|false|t|f)$/i.test(opt.trim()));
+}
+
+function resolveInputMode(q: QuizQuestion): InputMode {
+  const options = (q.options ?? []).map(o => o.trim()).filter(Boolean);
+
+  if (q.type === 'short_answer' || q.type === 'fill_blank') {
+    return 'text';
+  }
+
+  if (q.type === 'true_false' && optionsAreTrueFalseOnly(options.length ? options : ['True', 'False'])) {
+    return 'true_false';
+  }
+
+  if (NUMERIC_QUESTION.test(q.question) || optionsAreTrueFalseOnly(options)) {
+    return 'text';
+  }
+
+  if (q.type === 'mcq' && options.length >= 4 && !optionsAreTrueFalseOnly(options)) {
+    return 'mcq';
+  }
+
+  if (options.length >= 4 && !optionsAreTrueFalseOnly(options)) {
+    return 'mcq';
+  }
+
+  if (q.type === 'true_false') {
+    return 'true_false';
+  }
+
+  return 'text';
+}
+
+function textPlaceholder(q: QuizQuestion): string {
+  if (NUMERIC_QUESTION.test(q.question)) {
+    return 'Enter the value (e.g. 9 nm or 50%)';
+  }
+  return 'Type your answer';
+}
 
 interface Props {
   questions: QuizQuestion[];
@@ -36,6 +81,7 @@ const StudyAssessment: React.FC<Props> = ({ questions, mode, timeLimitMinutes = 
 
   const q = questions[current];
   const progress = ((current + 1) / questions.length) * 100;
+  const inputMode = q ? resolveInputMode(q) : 'text';
 
   const finish = async () => {
     setSubmitting(true);
@@ -66,28 +112,31 @@ const StudyAssessment: React.FC<Props> = ({ questions, mode, timeLimitMinutes = 
         {q.topic && <span className="tag-purple" style={{ marginBottom: 10, display: 'inline-block' }}>{q.topic}</span>}
         <p style={{ color: TEXT, fontSize: 17, fontWeight: 600, lineHeight: 1.7, marginBottom: 16 }}>{q.question}</p>
 
-        {q.type === 'true_false' || (q.options?.length ?? 0) <= 2 ? (
-          ['True', 'False'].map(opt => (
-            <button key={opt} type="button" className={`study-option ${answers[q.id] === opt ? 'study-option--selected' : ''}`}
-              onClick={() => setAnswers(a => ({ ...a, [q.id]: opt }))}>{opt}</button>
-          ))
-        ) : (
-          (q.options?.length ? q.options : ['A', 'B', 'C', 'D']).map(opt => (
-            <button key={opt} type="button" className={`study-option ${answers[q.id] === opt ? 'study-option--selected' : ''}`}
-              onClick={() => setAnswers(a => ({ ...a, [q.id]: opt }))}>{opt}</button>
-          ))
-        )}
+        {inputMode === 'true_false' && ['True', 'False'].map(opt => (
+          <button key={opt} type="button" className={`study-option ${answers[q.id] === opt ? 'study-option--selected' : ''}`}
+            onClick={() => setAnswers(a => ({ ...a, [q.id]: opt }))}>{opt}</button>
+        ))}
 
-        {(!q.options || q.options.length === 0) && (
-          <input className="input-med" value={answers[q.id] || ''} placeholder="Your answer"
-            onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))} />
+        {inputMode === 'mcq' && (q.options ?? []).map(opt => (
+          <button key={opt} type="button" className={`study-option ${answers[q.id] === opt ? 'study-option--selected' : ''}`}
+            onClick={() => setAnswers(a => ({ ...a, [q.id]: opt }))}>{opt}</button>
+        ))}
+
+        {inputMode === 'text' && (
+          <input
+            className="input-med"
+            value={answers[q.id] || ''}
+            placeholder={textPlaceholder(q)}
+            onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
+            aria-label="Your answer"
+          />
         )}
       </div>
 
       <div className="study-assessment__nav">
         <button className="btn-outline" disabled={current === 0} onClick={() => setCurrent(c => c - 1)}>Previous</button>
         {current < questions.length - 1 ? (
-          <button className="btn-cyan" disabled={!answers[q.id]} onClick={() => setCurrent(c => c + 1)}>Next</button>
+          <button className="btn-cyan" disabled={!answers[q.id]?.trim()} onClick={() => setCurrent(c => c + 1)}>Next</button>
         ) : (
           <button className="btn-cyan" disabled={submitting || Object.keys(answers).length < questions.length}
             onClick={finish}>
