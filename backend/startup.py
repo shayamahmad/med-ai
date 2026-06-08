@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 from typing import Any
 
 from asset_loader import load_all_assets
@@ -14,6 +15,12 @@ logger = logging.getLogger(__name__)
 
 _rag: Any = None
 _rag_error: str | None = None
+
+
+def mistral_configured() -> bool:
+    load_project_env()
+    key = os.environ.get("MISTRAL_API_KEY", "").strip()
+    return bool(key) and not key.startswith("your_")
 
 
 def init_fast_services() -> None:
@@ -29,20 +36,46 @@ def init_fast_services() -> None:
         logger.warning("[Startup] Study DB init failed: %s", exc)
 
 
+def reset_rag_cache() -> None:
+    """Clear cached RAG failure so a retry can succeed after .env updates."""
+    global _rag, _rag_error
+    _rag = None
+    _rag_error = None
+
+
 def get_rag():
     """Return the RAG singleton, initializing it on first use."""
     global _rag, _rag_error
 
     if _rag is not None:
-        return _rag
+        if _rag.mistral is None and mistral_configured():
+            logger.info("[Startup] MISTRAL_API_KEY now set — reinitializing RAG")
+            reset_rag_cache()
+        else:
+            return _rag
+
     if _rag_error is not None:
-        raise RuntimeError(_rag_error)
+        if mistral_configured():
+            logger.info("[Startup] Retrying RAG init after previous failure")
+            _rag_error = None
+        else:
+            raise RuntimeError(_rag_error)
+
+    if not mistral_configured():
+        raise RuntimeError(
+            "MISTRAL_API_KEY not set. Add it to .env in the project root and restart the backend."
+        )
 
     load_project_env()
     try:
         from rag_system import MedicalRAG
 
         _rag = MedicalRAG()
+        if _rag.mistral is None:
+            raise RuntimeError(
+                "MISTRAL_API_KEY not loaded. Restart the backend via npm start after editing .env."
+            )
+        logger.info("[Startup] RAG engine ready (Mistral + ChromaDB)")
         return _rag
     except Exception as exc:
         _rag_error = str(exc)
@@ -50,15 +83,17 @@ def get_rag():
 
 
 def rag_status() -> tuple[bool, str | None]:
-    if _rag is not None:
+    if _rag is not None and _rag.mistral is not None:
         return True, None
+    if not mistral_configured():
+        return False, "MISTRAL_API_KEY not set in .env"
     if _rag_error is not None:
         return False, _rag_error
-    return False, None
+    return False, "RAG initializing — wait ~30s after backend start, then retry"
 
 
 def init_rag_on_first_use() -> None:
-    """Warm up RAG after CNN models are loaded."""
+    """Warm up RAG (Mistral + embeddings). Safe to run in a background thread."""
     try:
         get_rag()
     except RuntimeError as exc:

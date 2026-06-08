@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import ImageUploader from '../components/ImageUploader';
 import ConfidenceBar from '../components/ConfidenceBar';
-import { classifyChest, classifyBrain, classifyEye, classifySkin, classifyBone, classifyKnee, classifyDental, getGradcam } from '../api';
+import ClinicalDecisionReport from '../components/detection/ClinicalDecisionReport';
+import { classifyChest, classifyBrain, classifyEye, classifySkin, classifyBone, classifyKnee, classifyDental, getGradcam, generateImagingCDSReport } from '../api';
 import { ClassificationResult } from '../types';
+import { CDSReport } from '../types/cds';
 
 const TEXT = '#d0e4f0';
 const DIM = 'rgba(180,220,240,0.75)';
@@ -53,6 +55,9 @@ const DiseaseDetection: React.FC = () => {
   const [gradcam, setGradcam]     = useState<string | null>(null);
   const [loading, setLoading]     = useState(false);
   const [gcLoading, setGcLoading] = useState(false);
+  const [cdsReport, setCdsReport] = useState<CDSReport | null>(null);
+  const [cdsLoading, setCdsLoading] = useState(false);
+  const [cdsError, setCdsError]   = useState('');
   const [error, setError]         = useState('');
 
   // Switching scan modality resets ALL state including ImageUploader.
@@ -63,6 +68,8 @@ const DiseaseDetection: React.FC = () => {
     setFile(null);
     setResult(null);
     setGradcam(null);
+    setCdsReport(null);
+    setCdsError('');
     setError('');
   };
 
@@ -70,18 +77,52 @@ const DiseaseDetection: React.FC = () => {
     setFile(f);
     setResult(null);
     setGradcam(null);
+    setCdsReport(null);
+    setCdsError('');
     setError('');
   }, []);
 
+  const fetchCdsReport = async (detection: ClassificationResult, hasGradcam: boolean) => {
+    setCdsLoading(true);
+    setCdsError('');
+    setCdsReport(null);
+    try {
+      const report = await generateImagingCDSReport({
+        modality: active.id,
+        modality_label: active.label,
+        architecture: active.arch,
+        predicted_class: detection.predicted_class,
+        confidence: detection.confidence,
+        all_scores: detection.all_scores,
+        gradcam_available: hasGradcam,
+      });
+      setCdsReport(report);
+    } catch (e: unknown) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setCdsError(typeof detail === 'string' ? detail : 'Could not generate clinical decision support report.');
+    } finally {
+      setCdsLoading(false);
+    }
+  };
+
   const handleAnalyze = async () => {
     if (!file) return;
-    setLoading(true); setError(''); setResult(null); setGradcam(null);
+    setLoading(true); setError(''); setResult(null); setGradcam(null); setCdsReport(null); setCdsError('');
     try {
       const res = await active.fn(file);
       setResult(res);
       setGcLoading(true);
-      try { const gc = await getGradcam(file, active.id); setGradcam(gc.gradcam_image); } catch {}
-      finally { setGcLoading(false); }
+      let hasGradcam = false;
+      try {
+        const gc = await getGradcam(file, active.id);
+        setGradcam(gc.gradcam_image);
+        hasGradcam = true;
+      } catch {
+        setGradcam(null);
+      } finally {
+        setGcLoading(false);
+      }
+      await fetchCdsReport(res, hasGradcam);
     } catch (e: any) {
       const detail = e?.response?.data?.detail;
       if (detail) {
@@ -311,6 +352,26 @@ const DiseaseDetection: React.FC = () => {
         </div>
 
       </div>
+
+      {result && cdsLoading && (
+        <div className="cds-loading glass fade-in">
+          <div className="clinical-spinner" style={{ width: 28, height: 28, margin: '0 auto 14px' }} />
+          <p style={{ color: DIM, fontSize: 15 }}>Generating Clinical Decision Support Report…</p>
+          <p style={{ color: 'rgba(0,200,255,0.5)', fontSize: 13, marginTop: 8 }}>
+            Synthesizing detection summary, diagnostic workup, treatment pathway, and guideline references
+          </p>
+        </div>
+      )}
+
+      {result && cdsError && !cdsLoading && (
+        <div style={{ marginTop: 28, background: 'rgba(255,82,82,0.06)', border: '1px solid rgba(255,82,82,0.28)', borderRadius: 12, padding: '16px 20px', color: '#ff6b6b', fontSize: 15 }}>
+          CDS Report: {cdsError}
+        </div>
+      )}
+
+      {result && cdsReport && !cdsLoading && (
+        <ClinicalDecisionReport report={cdsReport} accent={active.color} />
+      )}
     </div>
   );
 };

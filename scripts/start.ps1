@@ -40,8 +40,8 @@ Start-Sleep -Seconds 1
 Write-Host "Starting backend on http://127.0.0.1:8000 ..." -ForegroundColor Cyan
 Write-Host "(First start may take 1-2 min while models load)" -ForegroundColor DarkGray
 
-$backendCmd = "Set-Location '$Backend'; `$env:PYTHONUTF8='1'; .\.venv\Scripts\uvicorn main:app --host 127.0.0.1 --port 8000"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd
+$runBackend = Join-Path $Root "scripts\run-backend.ps1"
+Start-Process powershell -ArgumentList "-NoExit", "-File", $runBackend
 
 Write-Host "Waiting for backend health check..." -ForegroundColor Cyan
 $ready = $false

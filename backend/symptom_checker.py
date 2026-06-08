@@ -27,12 +27,17 @@ def check_symptoms(symptoms: list, rag_instance=None) -> dict:
         ).model_dump()
 
     if rag_instance is None:
-        return SymptomCheckResponse(
-            input_symptoms=symptoms,
-            answer="RAG system not available. Add MISTRAL_API_KEY to .env and restart the backend.",
-            sources=[],
-            disclaimer=DISCLAIMER,
-        ).model_dump()
+        try:
+            from startup import get_rag
+
+            rag_instance = get_rag()
+        except RuntimeError as exc:
+            return SymptomCheckResponse(
+                input_symptoms=symptoms,
+                answer=str(exc),
+                sources=[],
+                disclaimer=DISCLAIMER,
+            ).model_dump()
 
     query = build_structured_symptom_query(symptoms)
 

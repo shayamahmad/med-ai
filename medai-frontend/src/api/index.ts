@@ -8,6 +8,7 @@ import {
   StudyAnalytics,
   StudyBook,
 } from '../types/study';
+import { CDSReport, CDSReportRequest } from '../types/cds';
 
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const api = axios.create({ baseURL: BASE, timeout: 30000 });
@@ -50,6 +51,12 @@ export const getGradcam = async (file: File, modelType: string): Promise<{ gradc
   return { gradcam_image: data.overlay_base64 };
 };
 
+// ── Clinical Decision Support (Imaging) ───────────────────────
+export const generateImagingCDSReport = async (payload: CDSReportRequest): Promise<CDSReport> => {
+  const { data } = await axios.post(`${BASE}/cds/imaging-report`, payload, { timeout: 120000 });
+  return data;
+};
+
 // ── RAG Tutor ─────────────────────────────────────────────────
 export const askTutor = async (question: string): Promise<RAGResponse> => {
   const { data } = await api.post('/rag/query', { query: question });
@@ -62,7 +69,7 @@ export const checkSymptoms = async (symptoms: string): Promise<SymptomCheckResul
     .split(/[,;]+/)
     .map(s => s.trim().toLowerCase())
     .filter(Boolean);
-  const { data } = await api.post('/symptom-check', { symptoms: symptomList });
+  const { data } = await api.post('/symptom-check', { symptoms: symptomList }, { timeout: 90000 });
   return data;
 };
 

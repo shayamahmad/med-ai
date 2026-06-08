@@ -17,8 +17,10 @@ from symptom_checker import check_symptoms
 from clinical.schemas import DiseaseLookupRequest
 from clinical.db import get_disease_by_slug, list_disease_slugs
 from clinical.service import get_or_generate_profile
+from cds.schemas import CDSReportRequest
+from cds.service import generate_imaging_cds_report
 from study.routes import router as study_router
-from startup import get_rag, init_fast_services, rag_status, run_heavy_startup_async
+from startup import get_rag, init_fast_services, mistral_configured, rag_status, run_heavy_startup_async
 
 load_project_env()
 
@@ -46,6 +48,15 @@ async def lifespan(app: FastAPI):
     logger.info("Starting MedAI backend (fast init)...")
     init_fast_services()
     app.state.startup = {"status": "loading", "models": {}, "loaded": 0, "total": 8}
+
+    async def warmup_rag() -> None:
+        try:
+            await asyncio.to_thread(get_rag)
+            logger.info("[Startup] RAG warmup complete.")
+        except RuntimeError as exc:
+            logger.warning("[Startup] RAG warmup skipped: %s", exc)
+
+    asyncio.create_task(warmup_rag())
 
     async def load_heavy_services() -> None:
         try:
@@ -145,6 +156,7 @@ async def health():
         "device": str(registry.device),
         "loaded": sum(status.values()),
         "total": len(status),
+        "mistral_configured": mistral_configured(),
         "rag_ready": rag_ready,
         "rag_error": rag_error,
         "startup_status": startup.get("status", "unknown"),
@@ -556,6 +568,22 @@ async def clinical_disease_lookup(payload: DiseaseLookupRequest):
             detail="No clinical profile available for this condition.",
         )
     return profile.model_dump()
+
+# ───────────────────────────────────────────────────────────
+# Clinical Decision Support (Imaging)
+# ───────────────────────────────────────────────────────────
+
+@app.post("/cds/imaging-report", tags=["Clinical Decision Support"])
+async def cds_imaging_report(payload: CDSReportRequest):
+    try:
+        return generate_imaging_cds_report(payload, rag_instance=_safe_rag()).model_dump()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("[CDS] Report generation failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Failed to generate clinical decision support report.") from exc
 
 # ───────────────────────────────────────────────────────────
 # RAG Query
