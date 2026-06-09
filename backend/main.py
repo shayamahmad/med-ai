@@ -20,6 +20,7 @@ from clinical.service import get_or_generate_profile
 from cds.schemas import CDSReportRequest
 from cds.service import generate_imaging_cds_report
 from lifestyle.routes import router as lifestyle_router
+from models3d.routes import router as models3d_router
 from study.routes import router as study_router
 from startup import get_rag, init_fast_services, mistral_configured, rag_status, run_heavy_startup_async
 
@@ -98,6 +99,7 @@ app.add_middleware(
 
 app.include_router(study_router)
 app.include_router(lifestyle_router)
+app.include_router(models3d_router)
 
 # ───────────────────────────────────────────────────────────
 # Helpers
@@ -162,6 +164,7 @@ async def health():
         "rag_ready": rag_ready,
         "rag_error": rag_error,
         "startup_status": startup.get("status", "unknown"),
+        "models3d_proxy": True,
     }
 
 

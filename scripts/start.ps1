@@ -31,6 +31,10 @@ $env:PYTHONUTF8 = "1"
 if (-not $env:REACT_APP_API_URL) {
     $env:REACT_APP_API_URL = "http://localhost:8000"
 }
+# Placeholder HF repo breaks the 3D viewer — use backend proxy instead
+if ($env:REACT_APP_HF_ASSETS_REPO -match 'your-username|placeholder|example') {
+    Remove-Item Env:REACT_APP_HF_ASSETS_REPO -ErrorAction SilentlyContinue
+}
 
 # Free port 8000 if a stale/hung backend is still listening
 Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue |

@@ -1,23 +1,31 @@
 import React, { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 
 const TEXT   = '#d0e4f0';
 const DIM    = 'rgba(180,220,240,0.75)';
 const DIMMER = 'rgba(140,180,210,0.5)';
 
-/** Hugging Face dataset, custom CDN, or public S3 bucket (no AWS keys needed for GET). */
+const PLACEHOLDER_RE = /your-username|placeholder|example/i;
+
+/** Backend proxy (default), Hugging Face dataset, custom CDN, or public S3 bucket. */
 function models3dBase(): string {
   if (process.env.REACT_APP_3D_MODELS_BASE) {
     return process.env.REACT_APP_3D_MODELS_BASE.replace(/\/$/, '');
   }
-  const repo = process.env.REACT_APP_HF_ASSETS_REPO;
-  if (repo) {
+
+  const repo = process.env.REACT_APP_HF_ASSETS_REPO?.trim();
+  if (repo && !PLACEHOLDER_RE.test(repo)) {
     const kind = process.env.REACT_APP_HF_REPO_TYPE || 'dataset';
     return kind === 'dataset'
       ? `https://huggingface.co/datasets/${repo}/resolve/main/3d-models`
       : `https://huggingface.co/${repo}/resolve/main/3d-models`;
   }
-  return 'https://td-medai-bucket.s3.ap-south-2.amazonaws.com/3d-models';
+
+  const api = (process.env.REACT_APP_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+  return `${api}/api/3d-models`;
 }
 
 const MODELS_3D_BASE = models3dBase();
@@ -213,62 +221,48 @@ const ORGANS = [
 // ─── Group by system ──────────────────────────────────────────────────────────
 const SYSTEMS = Array.from(new Set(ORGANS.map(o => o.system)));
 
+type SceneState = {
+  renderer: THREE.WebGLRenderer;
+  orbitControls: OrbitControls | null;
+  model: THREE.Object3D | null;
+};
+
+function setMaterialWireframe(material: THREE.Material, enabled: boolean): void {
+  if ('wireframe' in material) {
+    (material as THREE.MeshStandardMaterial).wireframe = enabled;
+  }
+}
+
+function applyWireframeToObject(object: THREE.Object3D, enabled: boolean): void {
+  object.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) {
+      const mesh = child as THREE.Mesh;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      materials.forEach((material) => {
+        if (material) setMaterialWireframe(material, enabled);
+      });
+    }
+  });
+}
+
 const Viewer3D: React.FC = () => {
   const mountRef  = useRef<HTMLDivElement>(null);
-  const sceneRef  = useRef<any>(null);
+  const sceneRef  = useRef<SceneState | null>(null);
   const animRef   = useRef<number>(0);
 
-  const [active, setActive]           = useState(ORGANS[0]);
-  const [loaded, setLoaded]           = useState(false);
+  const [active, setActive]           = useState(
+    ORGANS.find(o => o.id === 'realistic_human_heart') ?? ORGANS[0]
+  );
   const [modelLoading, setModelLoading] = useState(false);
   const [modelError, setModelError]   = useState('');
   const [filterSystem, setFilterSystem] = useState<string>('All');
   const [autoRotate, setAutoRotate]   = useState(true);
   const [wireframe, setWireframe]     = useState(false);
 
-  // ── Load Three.js + GLTFLoader + OrbitControls from CDN ──────────────────
-  useEffect(() => {
-    const loadScripts = async () => {
-      if ((window as any).THREE?._gltfLoaded) { setLoaded(true); return; }
-
-      // Three.js core
-      if (!(window as any).THREE) {
-        await new Promise<void>((res) => {
-          const s = document.createElement('script');
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-          s.onload = () => res();
-          document.head.appendChild(s);
-        });
-      }
-
-      // GLTFLoader
-      await new Promise<void>((res) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
-        s.onload = () => res();
-        document.head.appendChild(s);
-      });
-
-      // OrbitControls
-      await new Promise<void>((res) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js';
-        s.onload = () => res();
-        document.head.appendChild(s);
-      });
-
-      if ((window as any).THREE) (window as any).THREE._gltfLoaded = true;
-      setLoaded(true);
-    };
-
-    loadScripts();
-  }, []);
-
   // ── Build scene & load model whenever active organ changes ───────────────
   useEffect(() => {
-    if (!loaded || !mountRef.current) return;
-    const THREE = (window as any).THREE;
-    const el    = mountRef.current;
+    const el = mountRef.current;
+    if (!el) return;
 
     cancelAnimationFrame(animRef.current);
     if (sceneRef.current?.renderer) {
@@ -278,35 +272,25 @@ const Viewer3D: React.FC = () => {
 
     // ── Scene ────────────────────────────────────────────────────────────
     const scene = new THREE.Scene();
-    // Medium-dark blue-grey — dark enough to look medical, light enough to see models
     scene.background = new THREE.Color(0x1a2235);
 
-    // Subtle floor grid (lighter so it's visible but not distracting)
     const grid = new THREE.GridHelper(20, 30, 0x2a3a55, 0x1e2d44);
     grid.position.y = -2;
     scene.add(grid);
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(42, el.clientWidth / el.clientHeight, 0.01, 1000);
     camera.position.set(0, 0.3, 3.5);
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setSize(el.clientWidth, el.clientHeight);
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.physicallyCorrectLights = true;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.8;  // brighter overall exposure
     el.appendChild(renderer.domElement);
 
-    // ── Lighting — MUCH brighter so models are clearly visible ───────────
-    // Strong ambient so no surface goes fully black
     const ambient = new THREE.AmbientLight(0xffffff, 2.5);
     scene.add(ambient);
 
-    // Bright key light from upper-right front
     const keyLight = new THREE.DirectionalLight(0xffffff, 4.0);
     keyLight.position.set(5, 8, 7);
     keyLight.castShadow = true;
@@ -314,56 +298,45 @@ const Viewer3D: React.FC = () => {
     keyLight.shadow.mapSize.height = 2048;
     scene.add(keyLight);
 
-    // Cool fill from left
     const fillLight = new THREE.DirectionalLight(0xadd8ff, 2.5);
     fillLight.position.set(-6, 3, -4);
     scene.add(fillLight);
 
-    // Warm back-rim light
     const rimLight = new THREE.DirectionalLight(0xfff0cc, 2.0);
     rimLight.position.set(0, -3, -6);
     scene.add(rimLight);
 
-    // Front point light — pure white so it reveals texture detail
     const frontLight = new THREE.PointLight(0xffffff, 3.0, 15);
     frontLight.position.set(0, 1, 4);
     scene.add(frontLight);
 
-    // Accent colour glow matching organ
     const pointLight = new THREE.PointLight(new THREE.Color(active.color), 1.2, 12);
     pointLight.position.set(3, 3, 3);
     scene.add(pointLight);
 
-    // Bottom fill so underside isn't pitch black
     const bottomLight = new THREE.PointLight(0xffffff, 1.5, 8);
     bottomLight.position.set(0, -4, 1);
     scene.add(bottomLight);
 
-    // ── OrbitControls ────────────────────────────────────────────────────
-    let orbitControls: any = null;
-    if (THREE.OrbitControls) {
-      orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
-      orbitControls.enableDamping   = true;
-      orbitControls.dampingFactor   = 0.06;
-      orbitControls.autoRotate      = autoRotate;
-      orbitControls.autoRotateSpeed = 1.0;
-      orbitControls.minDistance     = 0.4;
-      orbitControls.maxDistance     = 12;
-      orbitControls.enablePan       = true;
-      orbitControls.panSpeed        = 0.6;
-    }
+    const orbitControls = new OrbitControls(camera, renderer.domElement);
+    orbitControls.enableDamping   = true;
+    orbitControls.dampingFactor   = 0.06;
+    orbitControls.autoRotate      = autoRotate;
+    orbitControls.autoRotateSpeed = 1.0;
+    orbitControls.minDistance     = 0.4;
+    orbitControls.maxDistance     = 12;
+    orbitControls.enablePan       = true;
+    orbitControls.panSpeed        = 0.6;
 
-    // ── Load GLB ─────────────────────────────────────────────────────────
     setModelLoading(true);
     setModelError('');
 
-    const loader = new THREE.GLTFLoader();
+    const loader = new GLTFLoader();
     loader.load(
       active.file,
-      (gltf: any) => {
+      (gltf) => {
         const model = gltf.scene;
 
-        // Normalise scale & centre
         const box    = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         const size   = box.getSize(new THREE.Vector3());
@@ -373,29 +346,29 @@ const Viewer3D: React.FC = () => {
         model.scale.setScalar(scale);
         model.position.sub(center.multiplyScalar(scale));
 
-        model.traverse((child: any) => {
-          if (child.isMesh) {
-            child.castShadow    = true;
-            child.receiveShadow = true;
-            if (child.material) {
-              child.material.envMapIntensity = 1.2;
-              if (wireframe) child.material.wireframe = true;
-            }
+        model.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mesh = child as THREE.Mesh;
+            mesh.castShadow    = true;
+            mesh.receiveShadow = true;
+            if (wireframe) applyWireframeToObject(mesh, true);
           }
         });
 
         scene.add(model);
-        sceneRef.current.model = model;
+        if (sceneRef.current) sceneRef.current.model = model;
         setModelLoading(false);
       },
       undefined,
-      (_err: any) => {
+      (err) => {
+        const name = active.file.split('/').pop() ?? 'model';
+        const detail = err instanceof Error ? err.message : String(err);
         setModelError(
-          `Could not load ${active.file.split('/').pop()}. Check your network or set REACT_APP_3D_MODELS_BASE in .env`
+          `Could not load ${name} from ${active.file}. ` +
+          `Restart the backend (npm start) so /api/3d-models is available. ${detail}`
         );
         setModelLoading(false);
 
-        // Fallback placeholder
         const geo      = new THREE.IcosahedronGeometry(1, 2);
         const matSolid = new THREE.MeshPhongMaterial({
           color: new THREE.Color(active.color), transparent: true, opacity: 0.18,
@@ -408,12 +381,11 @@ const Viewer3D: React.FC = () => {
       }
     );
 
-    sceneRef.current = { renderer, orbitControls };
+    sceneRef.current = { renderer, orbitControls, model: null };
 
-    // ── Animate loop ─────────────────────────────────────────────────────
     const tick = () => {
       animRef.current = requestAnimationFrame(tick);
-      if (orbitControls) orbitControls.update();
+      orbitControls.update();
       renderer.render(scene, camera);
     };
     tick();
@@ -428,20 +400,16 @@ const Viewer3D: React.FC = () => {
     return () => {
       cancelAnimationFrame(animRef.current);
       window.removeEventListener('resize', onResize);
-      orbitControls?.dispose();
+      orbitControls.dispose();
       renderer.dispose();
     };
-  }, [loaded, active]);
+  }, [active]);
 
-  // Toggle wireframe on running scene
   useEffect(() => {
     if (!sceneRef.current?.model) return;
-    sceneRef.current.model.traverse((child: any) => {
-      if (child.isMesh && child.material) child.material.wireframe = wireframe;
-    });
+    applyWireframeToObject(sceneRef.current.model, wireframe);
   }, [wireframe]);
 
-  // Toggle auto-rotate on running controls
   useEffect(() => {
     if (sceneRef.current?.orbitControls) {
       sceneRef.current.orbitControls.autoRotate = autoRotate;
@@ -558,7 +526,7 @@ const Viewer3D: React.FC = () => {
             </div>
 
             {/* Loading overlay */}
-            {(modelLoading || !loaded) && (
+            {modelLoading && (
               <div style={{
                 position: 'absolute', inset: 0, display: 'flex',
                 flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -570,7 +538,7 @@ const Viewer3D: React.FC = () => {
                   ))}
                 </div>
                 <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: DIM }}>
-                  {!loaded ? 'Initialising WebGL renderer…' : `Loading ${active.label}…`}
+                  Loading {active.label}…
                 </p>
               </div>
             )}
@@ -703,7 +671,6 @@ const Viewer3D: React.FC = () => {
                     textAlign: 'left' as const,
                   }}
                 >
-                  {/* Color accent bar */}
                   <div style={{
                     width: 3, height: 24, borderRadius: 2, flexShrink: 0,
                     background: active.id === o.id ? o.color : 'rgba(255,255,255,0.08)',
