@@ -48,6 +48,48 @@ export interface GuidelineReference {
   relevance?: string;
 }
 
+export type ValidationVerdict =
+  | 'Prediction Highly Consistent with Imaging Findings'
+  | 'Prediction Consistent but Requires Further Testing'
+  | 'Prediction Uncertain'
+  | 'Prediction Likely Incorrect';
+
+export type ReliabilityLevel =
+  | 'strongly_supported'
+  | 'moderately_supported'
+  | 'weakly_supported'
+  | 'inconclusive';
+
+export interface RadiologicalFeatureAnalysis {
+  feature: string;
+  observed_findings: string;
+  disease_correlation: string;
+  evidence_weight: 'supporting' | 'neutral' | 'conflicting';
+}
+
+export interface AlternativeDiagnosisEvaluation {
+  condition: string;
+  why_evaluated: string;
+  similarities_to_scan: string[];
+  missing_or_contradictory_features: string[];
+  relative_likelihood: string;
+}
+
+export interface PredictionValidationReport {
+  radiological_feature_analysis: RadiologicalFeatureAnalysis[];
+  primary_diagnosis_justification: string;
+  supporting_evidence: string[];
+  conflicting_evidence: string[];
+  alternative_diagnosis_evaluations: AlternativeDiagnosisEvaluation[];
+  reliability_level: ReliabilityLevel;
+  reliability_assessment: string;
+  clinical_consistency_analysis: string;
+  gradcam_explainability: string;
+  validation_verdict: ValidationVerdict;
+  verdict_explanation: string;
+  validation_disclaimer: string;
+}
+
 export interface CDSReportRequest {
   modality: string;
   modality_label: string;
@@ -60,6 +102,7 @@ export interface CDSReportRequest {
 
 export interface CDSReport {
   detection_summary: DetectionSummary;
+  prediction_validation: PredictionValidationReport;
   diagnostic_confirmation_tests: string[];
   severity_assessment: SeverityAssessment;
   treatment_pathway: TreatmentPathway;

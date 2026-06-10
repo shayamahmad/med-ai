@@ -722,6 +722,46 @@
   border-radius: 14px;
   border: 1px dashed rgba(0, 229, 255, 0.2);
 }
+.cds-validation-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.cds-validation-verdict__badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 14px;
+}
+.cds-validation-disclaimer {
+  margin-top: 18px;
+  font-size: 13px;
+}
+.cds-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.cds-feature-card {
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 229, 255, 0.12);
+  background: rgba(0, 229, 255, 0.03);
+}
+.cds-feature-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+.cds-inline-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(180, 220, 240, 0.55);
+  margin: 12px 0 6px;
+}
 
 /* ── STUDY COMPANION ───────────────────────────── */
 .study-main-tab {

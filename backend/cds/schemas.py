@@ -54,6 +54,53 @@ class GuidelineReference(BaseModel):
     relevance: str = ""
 
 
+ValidationVerdict = Literal[
+    "Prediction Highly Consistent with Imaging Findings",
+    "Prediction Consistent but Requires Further Testing",
+    "Prediction Uncertain",
+    "Prediction Likely Incorrect",
+]
+
+ReliabilityLevel = Literal[
+    "strongly_supported",
+    "moderately_supported",
+    "weakly_supported",
+    "inconclusive",
+]
+
+
+class RadiologicalFeatureAnalysis(BaseModel):
+    feature: str
+    observed_findings: str = ""
+    disease_correlation: str = ""
+    evidence_weight: Literal["supporting", "neutral", "conflicting"] = "neutral"
+
+
+class AlternativeDiagnosisEvaluation(BaseModel):
+    condition: str
+    why_evaluated: str = ""
+    similarities_to_scan: list[str] = Field(default_factory=list)
+    missing_or_contradictory_features: list[str] = Field(default_factory=list)
+    relative_likelihood: str = ""
+
+
+class PredictionValidationReport(BaseModel):
+    radiological_feature_analysis: list[RadiologicalFeatureAnalysis] = Field(default_factory=list)
+    primary_diagnosis_justification: str = ""
+    supporting_evidence: list[str] = Field(default_factory=list)
+    conflicting_evidence: list[str] = Field(default_factory=list)
+    alternative_diagnosis_evaluations: list[AlternativeDiagnosisEvaluation] = Field(
+        default_factory=list
+    )
+    reliability_level: ReliabilityLevel = "moderately_supported"
+    reliability_assessment: str = ""
+    clinical_consistency_analysis: str = ""
+    gradcam_explainability: str = ""
+    validation_verdict: ValidationVerdict = "Prediction Consistent but Requires Further Testing"
+    verdict_explanation: str = ""
+    validation_disclaimer: str = ""
+
+
 class CDSReportRequest(BaseModel):
     modality: str
     modality_label: str
@@ -66,6 +113,7 @@ class CDSReportRequest(BaseModel):
 
 class CDSReportResponse(BaseModel):
     detection_summary: DetectionSummary
+    prediction_validation: PredictionValidationReport
     diagnostic_confirmation_tests: list[str] = Field(default_factory=list)
     severity_assessment: SeverityAssessment
     treatment_pathway: TreatmentPathway

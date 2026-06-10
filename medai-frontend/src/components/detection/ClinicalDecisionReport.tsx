@@ -18,6 +18,26 @@ const TIER_LABEL: Record<string, string> = {
   low: 'Low confidence',
 };
 
+const RELIABILITY_LABEL: Record<string, string> = {
+  strongly_supported: 'Strongly supported',
+  moderately_supported: 'Moderately supported',
+  weakly_supported: 'Weakly supported',
+  inconclusive: 'Inconclusive',
+};
+
+const EVIDENCE_WEIGHT_LABEL: Record<string, string> = {
+  supporting: 'Supporting',
+  neutral: 'Neutral',
+  conflicting: 'Conflicting',
+};
+
+function verdictTagClass(verdict: string): string {
+  if (verdict.includes('Highly Consistent')) return 'tag-green';
+  if (verdict.includes('Requires Further Testing')) return 'tag-cyan';
+  if (verdict.includes('Uncertain')) return 'tag-amber';
+  return 'tag-red';
+}
+
 interface SectionProps {
   id: string;
   title: string;
@@ -59,6 +79,7 @@ interface Props {
 
 const ClinicalDecisionReport: React.FC<Props> = ({ report, accent = ACCENT }) => {
   const s = report.detection_summary;
+  const pv = report.prediction_validation;
   const sev = report.severity_assessment;
   const tx = report.treatment_pathway;
   const fu = report.follow_up_plan;
@@ -134,11 +155,121 @@ const ClinicalDecisionReport: React.FC<Props> = ({ report, accent = ACCENT }) =>
         )}
       </ReportSection>
 
-      <ReportSection id="cds-2" number={2} title="Recommended Diagnostic Confirmation Tests">
+      <ReportSection id="cds-2" number={2} title="Prediction Validation & Explainability Report">
+        <div className="cds-validation-verdict">
+          <span className={`${verdictTagClass(pv.validation_verdict)} cds-validation-verdict__badge`}>
+            {pv.validation_verdict}
+          </span>
+          <span className="tag-purple">{RELIABILITY_LABEL[pv.reliability_level] ?? pv.reliability_level}</span>
+        </div>
+        {pv.verdict_explanation && (
+          <p style={{ color: DIM, fontSize: 14, lineHeight: 1.8, marginTop: 14 }}>{pv.verdict_explanation}</p>
+        )}
+        {pv.primary_diagnosis_justification && (
+          <>
+            <p className="cds-subheading">Primary diagnosis justification</p>
+            <p style={{ color: DIM, fontSize: 14, lineHeight: 1.8 }}>{pv.primary_diagnosis_justification}</p>
+          </>
+        )}
+        {pv.radiological_feature_analysis.length > 0 && (
+          <>
+            <p className="cds-subheading">Radiological feature analysis</p>
+            <div className="cds-feature-grid">
+              {pv.radiological_feature_analysis.map((f, i) => (
+                <div key={i} className="cds-feature-card">
+                  <div className="cds-feature-card__head">
+                    <strong style={{ color: TEXT }}>{f.feature}</strong>
+                    <span className={`tag-${f.evidence_weight === 'supporting' ? 'green' : f.evidence_weight === 'conflicting' ? 'red' : 'amber'}`}>
+                      {EVIDENCE_WEIGHT_LABEL[f.evidence_weight] ?? f.evidence_weight}
+                    </span>
+                  </div>
+                  {f.observed_findings && (
+                    <p style={{ color: DIM, fontSize: 13, marginTop: 8, lineHeight: 1.65 }}>
+                      <strong style={{ color: TEXT }}>Observed: </strong>{f.observed_findings}
+                    </p>
+                  )}
+                  {f.disease_correlation && (
+                    <p style={{ color: DIM, fontSize: 13, marginTop: 6, lineHeight: 1.65 }}>
+                      <strong style={{ color: accent }}>Correlation: </strong>{f.disease_correlation}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        {pv.supporting_evidence.length > 0 && (
+          <>
+            <p className="cds-subheading">Supporting evidence</p>
+            <BulletList items={pv.supporting_evidence} />
+          </>
+        )}
+        {pv.conflicting_evidence.length > 0 && (
+          <>
+            <p className="cds-subheading">Conflicting evidence</p>
+            <BulletList items={pv.conflicting_evidence} />
+          </>
+        )}
+        {pv.alternative_diagnosis_evaluations.length > 0 && (
+          <>
+            <p className="cds-subheading">Alternative diagnosis evaluation</p>
+            <div className="cds-diff-list">
+              {pv.alternative_diagnosis_evaluations.map((alt, i) => (
+                <div key={i} className="cds-diff-item">
+                  <strong style={{ color: TEXT }}>{alt.condition}</strong>
+                  {alt.why_evaluated && (
+                    <p style={{ color: DIM, fontSize: 13, marginTop: 8, lineHeight: 1.65 }}>{alt.why_evaluated}</p>
+                  )}
+                  {alt.similarities_to_scan.length > 0 && (
+                    <>
+                      <p className="cds-inline-label">Similarities with current scan</p>
+                      <BulletList items={alt.similarities_to_scan} />
+                    </>
+                  )}
+                  {alt.missing_or_contradictory_features.length > 0 && (
+                    <>
+                      <p className="cds-inline-label">Missing or contradictory features</p>
+                      <BulletList items={alt.missing_or_contradictory_features} />
+                    </>
+                  )}
+                  {alt.relative_likelihood && (
+                    <p style={{ color: DIM, fontSize: 13, marginTop: 8, lineHeight: 1.65 }}>
+                      <strong style={{ color: TEXT }}>Relative likelihood: </strong>{alt.relative_likelihood}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        {pv.reliability_assessment && (
+          <>
+            <p className="cds-subheading">Overall reliability assessment</p>
+            <p style={{ color: DIM, fontSize: 14, lineHeight: 1.8 }}>{pv.reliability_assessment}</p>
+          </>
+        )}
+        {pv.clinical_consistency_analysis && (
+          <>
+            <p className="cds-subheading">Clinical consistency analysis</p>
+            <p style={{ color: DIM, fontSize: 14, lineHeight: 1.8 }}>{pv.clinical_consistency_analysis}</p>
+          </>
+        )}
+        {pv.gradcam_explainability && (
+          <>
+            <p className="cds-subheading">Grad-CAM explainability</p>
+            <p style={{ color: DIM, fontSize: 14, lineHeight: 1.75 }}>{pv.gradcam_explainability}</p>
+          </>
+        )}
+        <div className="clinical-disclaimer cds-validation-disclaimer">
+          {pv.validation_disclaimer}
+        </div>
+      </ReportSection>
+
+      <ReportSection id="cds-3" number={3} title="Recommended Diagnostic Confirmation Tests">
         <BulletList items={report.diagnostic_confirmation_tests} />
       </ReportSection>
 
-      <ReportSection id="cds-3" number={3} title="Severity Assessment">
+      <ReportSection id="cds-4" number={4} title="Severity Assessment">
         <p style={{ color: DIM, fontSize: 14, lineHeight: 1.75, marginBottom: 12 }}>{sev.rationale}</p>
         {sev.influencing_factors.length > 0 && (
           <>
@@ -148,7 +279,7 @@ const ClinicalDecisionReport: React.FC<Props> = ({ report, accent = ACCENT }) =>
         )}
       </ReportSection>
 
-      <ReportSection id="cds-4" number={4} title="Evidence-Based Treatment Pathway">
+      <ReportSection id="cds-5" number={5} title="Evidence-Based Treatment Pathway">
         {tx.immediate_actions.length > 0 && (
           <>
             <p className="cds-subheading">Immediate actions</p>
@@ -189,11 +320,11 @@ const ClinicalDecisionReport: React.FC<Props> = ({ report, accent = ACCENT }) =>
         )}
       </ReportSection>
 
-      <ReportSection id="cds-5" number={5} title="Specialist Referral Recommendations">
+      <ReportSection id="cds-6" number={6} title="Specialist Referral Recommendations">
         <BulletList items={report.specialist_referrals} />
       </ReportSection>
 
-      <ReportSection id="cds-6" number={6} title="Follow-Up and Monitoring Plan">
+      <ReportSection id="cds-7" number={7} title="Follow-Up and Monitoring Plan">
         {fu.follow_up_intervals.length > 0 && (
           <>
             <p className="cds-subheading">Follow-up intervals</p>
@@ -220,15 +351,15 @@ const ClinicalDecisionReport: React.FC<Props> = ({ report, accent = ACCENT }) =>
         )}
       </ReportSection>
 
-      <ReportSection id="cds-7" number={7} title="Red Flag Findings — Urgent Escalation" variant="warning">
+      <ReportSection id="cds-8" number={8} title="Red Flag Findings — Urgent Escalation" variant="warning">
         <BulletList items={report.red_flags} />
       </ReportSection>
 
-      <ReportSection id="cds-8" number={8} title="Clinical Reasoning" defaultOpen={false}>
+      <ReportSection id="cds-9" number={9} title="Clinical Reasoning" defaultOpen={false}>
         <p style={{ color: DIM, fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{report.clinical_reasoning}</p>
       </ReportSection>
 
-      <ReportSection id="cds-9" number={9} title="Guideline References" defaultOpen={false}>
+      <ReportSection id="cds-10" number={10} title="Guideline References" defaultOpen={false}>
         <div className="cds-ref-list">
           {report.references.map((ref, i) => (
             <div key={i} className="cds-ref-item">

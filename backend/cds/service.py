@@ -14,6 +14,9 @@ from cds.schemas import (
     FollowUpPlan,
     GuidelineReference,
     MedicationClassItem,
+    PredictionValidationReport,
+    RadiologicalFeatureAnalysis,
+    AlternativeDiagnosisEvaluation,
     SeverityAssessment,
     TreatmentPathway,
 )
@@ -28,6 +31,13 @@ DISCLAIMER = (
     "require integration of patient history, physical examination, laboratory results, "
     "comorbidities, allergies, current medications, and other relevant clinical data "
     "by a qualified physician."
+)
+
+VALIDATION_DISCLAIMER = (
+    "This Prediction Validation & Explainability Report is intended for clinical decision "
+    "support only. It does not replace professional medical judgment, pathological "
+    "confirmation, laboratory testing, or additional imaging studies. All conclusions "
+    "must be verified by a qualified physician using complete clinical context."
 )
 
 LOW_CONFIDENCE_THRESHOLD = 0.65
@@ -105,6 +115,74 @@ def _mistral_client() -> Mistral:
     return Mistral(api_key=key)
 
 
+def _parse_validation_report(data: dict, payload: CDSReportRequest, tier: str) -> PredictionValidationReport:
+    raw = data.get("prediction_validation") or {}
+    verdict = raw.get("validation_verdict", "Prediction Consistent but Requires Further Testing")
+    valid_verdicts = {
+        "Prediction Highly Consistent with Imaging Findings",
+        "Prediction Consistent but Requires Further Testing",
+        "Prediction Uncertain",
+        "Prediction Likely Incorrect",
+    }
+    if verdict not in valid_verdicts:
+        verdict = "Prediction Consistent but Requires Further Testing"
+
+    reliability = raw.get("reliability_level", "moderately_supported")
+    if reliability not in ("strongly_supported", "moderately_supported", "weakly_supported", "inconclusive"):
+        reliability = "moderately_supported"
+
+    features = []
+    for item in raw.get("radiological_feature_analysis") or []:
+        if isinstance(item, dict):
+            weight = item.get("evidence_weight", "neutral")
+            if weight not in ("supporting", "neutral", "conflicting"):
+                weight = "neutral"
+            features.append(
+                RadiologicalFeatureAnalysis(
+                    feature=item.get("feature", "Finding"),
+                    observed_findings=item.get("observed_findings", ""),
+                    disease_correlation=item.get("disease_correlation", ""),
+                    evidence_weight=weight,
+                )
+            )
+
+    alternatives = []
+    for item in raw.get("alternative_diagnosis_evaluations") or []:
+        if isinstance(item, dict):
+            alternatives.append(
+                AlternativeDiagnosisEvaluation(
+                    condition=item.get("condition", "Alternative"),
+                    why_evaluated=item.get("why_evaluated", ""),
+                    similarities_to_scan=item.get("similarities_to_scan") or [],
+                    missing_or_contradictory_features=item.get("missing_or_contradictory_features") or [],
+                    relative_likelihood=item.get("relative_likelihood", ""),
+                )
+            )
+
+    gradcam_text = raw.get("gradcam_explainability") or ""
+    if payload.gradcam_available and not gradcam_text:
+        gradcam_text = (
+            "Grad-CAM heatmap regions indicate where the CNN weighted pixels for this prediction. "
+            "Overlap with expected pathology distribution supports explainability; discordance "
+            "suggests the model may be attending to confounding features."
+        )
+
+    return PredictionValidationReport(
+        radiological_feature_analysis=features,
+        primary_diagnosis_justification=raw.get("primary_diagnosis_justification", ""),
+        supporting_evidence=raw.get("supporting_evidence") or [],
+        conflicting_evidence=raw.get("conflicting_evidence") or [],
+        alternative_diagnosis_evaluations=alternatives,
+        reliability_level=reliability,
+        reliability_assessment=raw.get("reliability_assessment", ""),
+        clinical_consistency_analysis=raw.get("clinical_consistency_analysis", ""),
+        gradcam_explainability=gradcam_text,
+        validation_verdict=verdict,
+        verdict_explanation=raw.get("verdict_explanation", ""),
+        validation_disclaimer=raw.get("validation_disclaimer") or VALIDATION_DISCLAIMER,
+    )
+
+
 def generate_imaging_cds_report(payload: CDSReportRequest, rag_instance=None) -> CDSReportResponse:
     tier = _confidence_tier(payload.confidence)
     differentials = _build_differentials(payload)
@@ -136,6 +214,35 @@ Return ONLY valid JSON:
     "gradcam_interpretation": "...",
     "differential_diagnoses": [{{"condition": "...", "probability_percent": 0.0, "rationale": "..."}}]
   }},
+  "prediction_validation": {{
+    "radiological_feature_analysis": [
+      {{
+        "feature": "Lesion location|Size|Shape|Margins|Intensity patterns|Enhancement characteristics|Edema|Mass effect|Tissue infiltration|Anatomical involvement|Other",
+        "observed_findings": "What is inferred from modality-typical presentation and AI output",
+        "disease_correlation": "How this links to the predicted disease per literature",
+        "evidence_weight": "supporting|neutral|conflicting"
+      }}
+    ],
+    "primary_diagnosis_justification": "Detailed narrative linking observed features to predicted condition",
+    "supporting_evidence": ["..."],
+    "conflicting_evidence": ["..."],
+    "alternative_diagnosis_evaluations": [
+      {{
+        "condition": "...",
+        "why_evaluated": "Why the classifier or clinician would consider this",
+        "similarities_to_scan": ["..."],
+        "missing_or_contradictory_features": ["..."],
+        "relative_likelihood": "Why less likely than primary prediction"
+      }}
+    ],
+    "reliability_level": "strongly_supported|moderately_supported|weakly_supported|inconclusive",
+    "reliability_assessment": "Narrative on overall prediction reliability",
+    "clinical_consistency_analysis": "Compare findings with standard literature and known disease presentations",
+    "gradcam_explainability": "How Grad-CAM supports or conflicts with the prediction (if available)",
+    "validation_verdict": "Prediction Highly Consistent with Imaging Findings|Prediction Consistent but Requires Further Testing|Prediction Uncertain|Prediction Likely Incorrect",
+    "verdict_explanation": "Detailed evidence-based explanation for the verdict",
+    "validation_disclaimer": "CDS-only disclaimer; does not replace pathology, labs, or additional imaging"
+  }},
   "diagnostic_confirmation_tests": ["..."],
   "severity_assessment": {{
     "category": "mild|moderate|severe|critical",
@@ -162,6 +269,11 @@ Return ONLY valid JSON:
 }}
 
 Rules:
+- prediction_validation: critically evaluate whether the AI prediction is justified by available imaging evidence
+- Analyze at minimum: lesion location, size, shape, margins, intensity patterns, enhancement, edema, mass effect, infiltration, anatomical involvement
+- For each alternative diagnosis: explain why evaluated, similarities, and missing/contradictory features
+- reliability_level must align with confidence tier and evidence balance
+- validation_verdict must be one of the four exact verdict strings provided
 - gradcam_interpretation: explain Grad-CAM as model-attention heatmap, not independent radiological measurement
 - Include differential diagnoses from classifier scores where clinically relevant
 - For benign/normal predictions, emphasize reassurance pathways and when to re-evaluate
@@ -192,7 +304,7 @@ Supplementary medical knowledge (may be empty):
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        max_tokens=4500,
+        max_tokens=6500,
     )
     raw = response.choices[0].message.content
     raw = re.sub(r"```json|```", "", raw).strip()
@@ -234,6 +346,7 @@ Supplementary medical knowledge (may be empty):
                 for item in summary_data.get("differential_diagnoses") or []
             ],
         ),
+        prediction_validation=_parse_validation_report(data, payload, tier),
         diagnostic_confirmation_tests=data.get("diagnostic_confirmation_tests") or [],
         severity_assessment=SeverityAssessment(
             category=severity_cat,
