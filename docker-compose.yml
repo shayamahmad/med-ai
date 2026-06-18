@@ -18,8 +18,16 @@ services:
   frontend:
     build:
       context: ./medai-frontend
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8000}
+        REACT_APP_HF_ASSETS_REPO: ${REACT_APP_HF_ASSETS_REPO:-}
+        REACT_APP_3D_MODELS_BASE: ${REACT_APP_3D_MODELS_BASE:-}
+        REACT_APP_HF_REPO_TYPE: ${REACT_APP_HF_REPO_TYPE:-dataset}
 
     container_name: medai-frontend
+
+    env_file:
+      - .env
 
     ports:
       - "3000:80"

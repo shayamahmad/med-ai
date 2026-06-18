@@ -70,7 +70,15 @@ if ($ready) {
 }
 
 Write-Host "Starting frontend on http://localhost:3000 ..." -ForegroundColor Cyan
-$frontendCmd = "Set-Location '$Frontend'; `$env:REACT_APP_API_URL='$($env:REACT_APP_API_URL)'; npm start"
+$reactEnv = @()
+Get-ChildItem env:REACT_APP_* -ErrorAction SilentlyContinue | ForEach-Object {
+    $val = $_.Value -replace "'", "''"
+    $reactEnv += "`$env:$($_.Name)='$val'"
+}
+if ($reactEnv.Count -eq 0) {
+    $reactEnv += "`$env:REACT_APP_API_URL='http://localhost:8000'"
+}
+$frontendCmd = "Set-Location '$Frontend'; $($reactEnv -join '; '); npm start"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $frontendCmd
 
 Write-Host ""

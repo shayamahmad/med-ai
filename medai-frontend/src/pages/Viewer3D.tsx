@@ -264,10 +264,17 @@ const Viewer3D: React.FC = () => {
     const el = mountRef.current;
     if (!el) return;
 
+    let cancelled = false;
+
     cancelAnimationFrame(animRef.current);
     if (sceneRef.current?.renderer) {
+      const prevCanvas = sceneRef.current.renderer.domElement;
+      sceneRef.current.orbitControls?.dispose();
       sceneRef.current.renderer.dispose();
-      while (el.firstChild) el.removeChild(el.firstChild);
+      if (prevCanvas && el.contains(prevCanvas)) {
+        el.removeChild(prevCanvas);
+      }
+      sceneRef.current = null;
     }
 
     // ── Scene ────────────────────────────────────────────────────────────
@@ -335,6 +342,7 @@ const Viewer3D: React.FC = () => {
     loader.load(
       active.file,
       (gltf) => {
+        if (cancelled) return;
         const model = gltf.scene;
 
         const box    = new THREE.Box3().setFromObject(model);
@@ -361,6 +369,7 @@ const Viewer3D: React.FC = () => {
       },
       undefined,
       (err) => {
+        if (cancelled) return;
         const name = active.file.split('/').pop() ?? 'model';
         const detail = err instanceof Error ? err.message : String(err);
         setModelError(
@@ -398,10 +407,15 @@ const Viewer3D: React.FC = () => {
     window.addEventListener('resize', onResize);
 
     return () => {
+      cancelled = true;
       cancelAnimationFrame(animRef.current);
       window.removeEventListener('resize', onResize);
       orbitControls.dispose();
+      if (el.contains(renderer.domElement)) {
+        el.removeChild(renderer.domElement);
+      }
       renderer.dispose();
+      sceneRef.current = null;
     };
   }, [active]);
 
@@ -463,9 +477,8 @@ const Viewer3D: React.FC = () => {
         {/* ── LEFT: Viewport + controls ──────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-          {/* 3D Canvas */}
+          {/* 3D Canvas — WebGL mount is a separate empty div so React overlays stay safe */}
           <div
-            ref={mountRef}
             style={{
               height: 540, borderRadius: 18, overflow: 'hidden',
               border: `1px solid ${active.color}28`,
@@ -476,6 +489,11 @@ const Viewer3D: React.FC = () => {
             onMouseDown={e => (e.currentTarget.style.cursor = 'grabbing')}
             onMouseUp={e => (e.currentTarget.style.cursor = 'grab')}
           >
+            <div
+              ref={mountRef}
+              style={{ position: 'absolute', inset: 0, zIndex: 1 }}
+            />
+
             {/* Top-left label */}
             <div style={{
               position: 'absolute', top: 16, left: 18, zIndex: 5,
