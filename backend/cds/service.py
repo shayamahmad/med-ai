@@ -115,6 +115,70 @@ def _mistral_client() -> Mistral:
     return Mistral(api_key=key)
 
 
+def _extract_json_object(text: str) -> str:
+    cleaned = re.sub(r"```(?:json)?|```", "", text).strip()
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        raise ValueError("CDS model did not return a JSON object.")
+    return cleaned[start : end + 1]
+
+
+def _repair_llm_json(raw: str) -> str:
+    """Fix common LLM JSON defects that cause json.loads to fail."""
+    text = raw.replace("\r\n", "\n").replace("\r", "\n")
+    # Strip BOM / zero-width chars
+    text = text.replace("\ufeff", "").replace("\u200b", "")
+    # Trailing commas before } or ]
+    text = re.sub(r",(\s*[}\]])", r"\1", text)
+    # Missing commas between }/{ or ]/[  object/array neighbors
+    text = re.sub(r"([}\]])(\s*)([{\[])", r"\1,\2\3", text)
+    # Missing commas between a JSON value and the next object key
+    # e.g.  "foo": "bar"\n  "baz": 1   OR   true\n  "key":
+    text = re.sub(
+        r'(["\d]|true|false|null|\])(\s*\n\s*)(")',
+        r"\1,\2\3",
+        text,
+        flags=re.IGNORECASE,
+    )
+    # Missing commas after } or ] before a key
+    text = re.sub(r'([}\]])(\s*\n\s*)(")', r"\1,\2\3", text)
+    # Python-style True/False/None → JSON
+    text = re.sub(r"\bTrue\b", "true", text)
+    text = re.sub(r"\bFalse\b", "false", text)
+    text = re.sub(r"\bNone\b", "null", text)
+    return text
+
+
+def _parse_llm_json(text: str) -> dict:
+    candidate = _extract_json_object(text)
+    attempts = [candidate, _repair_llm_json(candidate)]
+    last_error: Exception | None = None
+    for attempt in attempts:
+        try:
+            data = json.loads(attempt)
+            if isinstance(data, dict):
+                return data
+        except json.JSONDecodeError as exc:
+            last_error = exc
+            logger.warning("[CDS] JSON parse attempt failed: %s", exc)
+
+    # Final pass: repair then strip illegal control chars outside strings (best-effort)
+    repaired = _repair_llm_json(candidate)
+    repaired = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", repaired)
+    try:
+        data = json.loads(repaired)
+        if isinstance(data, dict):
+            return data
+    except json.JSONDecodeError as exc:
+        last_error = exc
+
+    detail = str(last_error) if last_error else "invalid structure"
+    raise ValueError(
+        f"CDS model returned malformed JSON ({detail}). Please retry the analysis."
+    )
+
+
 def _parse_validation_report(data: dict, payload: CDSReportRequest, tier: str) -> PredictionValidationReport:
     raw = data.get("prediction_validation") or {}
     verdict = raw.get("validation_verdict", "Prediction Consistent but Requires Further Testing")
@@ -305,14 +369,11 @@ Supplementary medical knowledge (may be empty):
             {"role": "user", "content": user},
         ],
         max_tokens=6500,
+        response_format={"type": "json_object"},
+        temperature=0.2,
     )
-    raw = response.choices[0].message.content
-    raw = re.sub(r"```json|```", "", raw).strip()
-    start = raw.find("{")
-    end = raw.rfind("}")
-    if start == -1 or end == -1:
-        raise ValueError("CDS model did not return valid JSON.")
-    data = json.loads(raw[start : end + 1])
+    raw = response.choices[0].message.content or ""
+    data = _parse_llm_json(raw)
 
     summary_data = data.get("detection_summary", {})
     summary_data.setdefault("predicted_disease", payload.predicted_class.replace("_", " "))

@@ -1,0 +1,10 @@
+backend/.venv
+**/__pycache__
+**/*.pyc
+backend/models
+backend/chromadb
+backend/chromadb_study
+backend/data/study_uploads
+medai-frontend/node_modules
+.env
+.env.local

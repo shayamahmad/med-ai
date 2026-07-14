@@ -15,7 +15,12 @@ import {
   DietLifestyleReport,
 } from '../types/lifestyle';
 
-const BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const BASE =
+  process.env.REACT_APP_API_URL !== undefined && process.env.REACT_APP_API_URL !== ''
+    ? process.env.REACT_APP_API_URL
+    : process.env.NODE_ENV === 'production'
+      ? ''
+      : 'http://localhost:8000';
 const api = axios.create({ baseURL: BASE, timeout: 30000 });
 const form = (file: File) => { const fd = new FormData(); fd.append('file', file); return fd; };
 
@@ -67,6 +72,10 @@ export const askTutor = async (question: string): Promise<RAGResponse> => {
   const { data } = await api.post('/rag/query', { query: question });
   return { answer: data.answer, sources: data.sources ?? [] };
 };
+
+export const askOrganAI = (organName: string) => askTutor(
+  `For ${organName}: list AI clinical insights including disease detection possibilities, early warning signs, and top 3 preventive measures. Be concise and clinical.`,
+);
 
 // ── Symptom Checker ───────────────────────────────────────────
 export const checkSymptoms = async (symptoms: string): Promise<SymptomCheckResult> => {
@@ -148,7 +157,9 @@ export const chatWithBook = async (
 };
 
 export const generateBookQuiz = async (bookId: string, config: Record<string, unknown>) => {
-  const { data } = await studyApi.post(`/study/books/${bookId}/quiz/generate`, config);
+  const { data } = await studyApi.post(`/study/books/${bookId}/quiz/generate`, config, {
+    timeout: 120000,
+  });
   return data as { attempt_id: string; questions: QuizQuestion[]; disclaimer: string };
 };
 

@@ -24,6 +24,14 @@ def parse_json_list(raw: str | None) -> list:
         return []
 
 
+def normalize_severity(value: str | None) -> str:
+    text = (value or "moderate").lower().strip()
+    for level in ("critical", "severe", "moderate", "mild"):
+        if level in text:
+            return level
+    return "moderate"
+
+
 def parse_json_meds(raw: str | None) -> list[dict]:
     if not raw:
         return []

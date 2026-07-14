@@ -93,6 +93,7 @@ def _recover_stuck_books(conn: sqlite3.Connection) -> None:
             error_message = 'Processing interrupted - please upload again.',
             updated_at = ?
         WHERE status = 'processing'
+          AND updated_at < datetime('now', '-30 minutes')
         """,
         (_now(),),
     )

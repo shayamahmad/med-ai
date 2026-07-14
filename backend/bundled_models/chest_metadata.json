@@ -1,0 +1,17 @@
+{
+  "model_name": "DenseNet121 Chest X-Ray (CheXpert HF fallback)",
+  "num_classes": 5,
+  "classes": ["COVID-19", "Normal", "Pneumonia", "Lung_Opacity", "Tuberculosis"],
+  "class_to_idx": {
+    "COVID-19": 0,
+    "Normal": 1,
+    "Pneumonia": 2,
+    "Lung_Opacity": 3,
+    "Tuberculosis": 4
+  },
+  "input_size": [224, 224],
+  "normalize_mean": [0.485, 0.456, 0.406],
+  "normalize_std": [0.229, 0.224, 0.225],
+  "scan_type": "X-Ray",
+  "fallback_source": "itsomk/chexpert-densenet121"
+}

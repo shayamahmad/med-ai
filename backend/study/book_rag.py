@@ -4,6 +4,9 @@ import json
 import logging
 import os
 import re
+import shutil
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import chromadb
@@ -14,31 +17,113 @@ from study.embeddings import get_embedder
 
 logger = logging.getLogger(__name__)
 
+_study_chroma_was_reset = False
+
+
+def consume_study_chroma_reset() -> bool:
+    """Return True once after the study ChromaDB store was rebuilt."""
+    global _study_chroma_was_reset
+    if _study_chroma_was_reset:
+        _study_chroma_was_reset = False
+        return True
+    return False
+
+
+def _is_chromadb_schema_error(exc: BaseException) -> bool:
+    text = str(exc)
+    return "_type" in text or "CollectionConfiguration" in text
+
+
 DISCLAIMER = (
     "For educational purposes only. Responses are grounded in your uploaded material "
     "but may contain errors. Always verify with your textbook and instructors."
 )
 
 CHROMA_PATH = os.path.join(os.path.dirname(__file__), "..", "chromadb_study")
+_CHROMA_PATH_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "study_chroma_path.txt")
 # ChromaDB caps upsert batch size (~5461 records); stay safely below.
 CHROMA_UPSERT_BATCH = 4000
 EMBED_ENCODE_BATCH = 64
 
 
+def _read_persisted_chroma_path() -> str:
+    try:
+        text = Path(_CHROMA_PATH_FILE).read_text(encoding="utf-8").strip()
+        if text and Path(text).exists():
+            return text
+    except OSError:
+        pass
+    return CHROMA_PATH
+
+
+def _persist_chroma_path(path: str) -> None:
+    Path(_CHROMA_PATH_FILE).parent.mkdir(parents=True, exist_ok=True)
+    Path(_CHROMA_PATH_FILE).write_text(path, encoding="utf-8")
+
+
+_CHROMA_ACTIVE_PATH = _read_persisted_chroma_path()
+
+
+def _active_chroma_path() -> str:
+    return _CHROMA_ACTIVE_PATH
+
+
+def _reset_chromadb_store(chroma_path: str) -> str:
+    """Move incompatible ChromaDB data aside; return the path to use next."""
+    global _CHROMA_ACTIVE_PATH, _study_chroma_was_reset
+    path = Path(chroma_path)
+    if not path.exists():
+        return chroma_path
+
+    backup = path.parent / f"chromadb_study_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    try:
+        shutil.move(str(path), str(backup))
+        _CHROMA_ACTIVE_PATH = chroma_path
+        _persist_chroma_path(chroma_path)
+        _study_chroma_was_reset = True
+        logger.warning(
+            "[Study] Incompatible ChromaDB moved to %s. Ready books will be re-indexed from saved uploads.",
+            backup.name,
+        )
+        return chroma_path
+    except (PermissionError, OSError) as exc:
+        fresh = path.parent / f"chromadb_study_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        _CHROMA_ACTIVE_PATH = str(fresh)
+        _persist_chroma_path(str(fresh))
+        _study_chroma_was_reset = True
+        logger.warning(
+            "[Study] Could not move locked ChromaDB (%s). Using fresh store at %s.",
+            exc,
+            fresh.name,
+        )
+        return str(fresh)
+
+
 class BookRAG:
     def __init__(self, collection_name: str):
         self.collection_name = collection_name
-        self.client = chromadb.PersistentClient(
-            path=CHROMA_PATH,
-            settings=Settings(anonymized_telemetry=False),
-        )
-        self.collection = self.client.get_or_create_collection(
-            name=collection_name,
-            metadata={"hnsw:space": "cosine"},
-        )
+        try:
+            self.client, self.collection = self._open_collection(collection_name)
+        except (KeyError, ValueError) as exc:
+            if not _is_chromadb_schema_error(exc):
+                raise
+            _reset_chromadb_store(_active_chroma_path())
+            self.client, self.collection = self._open_collection(collection_name)
         self.embedder = get_embedder()
         mistral_key = os.environ.get("MISTRAL_API_KEY", "").strip()
         self.mistral = Mistral(api_key=mistral_key) if mistral_key and not mistral_key.startswith("your_") else None
+
+    @staticmethod
+    def _open_collection(collection_name: str):
+        client = chromadb.PersistentClient(
+            path=_active_chroma_path(),
+            settings=Settings(anonymized_telemetry=False),
+        )
+        coll = client.get_or_create_collection(
+            name=collection_name,
+            metadata={"hnsw:space": "cosine"},
+        )
+        return client, coll
 
     def index_chunks(
         self,

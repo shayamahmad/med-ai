@@ -1,5 +1,8 @@
 import os
 import logging
+import shutil
+from datetime import datetime
+from pathlib import Path
 
 import chromadb
 from chromadb.config import Settings
@@ -10,6 +13,24 @@ from env_config import load_project_env
 load_project_env()
 
 logger = logging.getLogger(__name__)
+
+
+def _is_chromadb_schema_error(exc: BaseException) -> bool:
+    text = str(exc)
+    return "_type" in text or "CollectionConfiguration" in text
+
+
+def _reset_chromadb_store(chroma_path: str) -> None:
+    path = Path(chroma_path)
+    if not path.exists():
+        return
+    backup = path.parent / f"chromadb_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    shutil.move(str(path), str(backup))
+    logger.warning(
+        "[RAG] Incompatible ChromaDB moved to %s. "
+        "Run 'python ingest.py' after adding PDFs to backend/medical_sources.",
+        backup.name,
+    )
 
 
 class MedicalRAG:
@@ -34,16 +55,16 @@ class MedicalRAG:
         model_name:  str = "mistral-small-latest",
         embed_model: str = "all-MiniLM-L6-v2",
     ):
-        # ── ChromaDB persistent client ───────────────────────
-        self.client = chromadb.PersistentClient(
-            path=chroma_path,
-            settings=Settings(anonymized_telemetry=False),
-        )
+        self.chroma_path = chroma_path
+        self.collection_name = collection
 
-        self.collection = self.client.get_or_create_collection(
-            name=collection,
-            metadata={"hnsw:space": "cosine"},
-        )
+        try:
+            self.client, self.collection = self._open_chroma(chroma_path, collection)
+        except (KeyError, ValueError) as exc:
+            if not _is_chromadb_schema_error(exc):
+                raise
+            _reset_chromadb_store(chroma_path)
+            self.client, self.collection = self._open_chroma(chroma_path, collection)
 
         # ── Embedding model (sentence-transformers) ──────────
         logger.info("[RAG] Loading embedding model: %s", embed_model)
@@ -63,7 +84,19 @@ class MedicalRAG:
 
         count = self.collection.count()
         status = "ready" if count > 0 else "EMPTY - run ingest.py first"
-        logger.info("[RAG] Knowledge base: %s chunks — %s", count, status)
+        logger.info("[RAG] Knowledge base: %s chunks - %s", count, status)
+
+    @staticmethod
+    def _open_chroma(chroma_path: str, collection: str):
+        client = chromadb.PersistentClient(
+            path=chroma_path,
+            settings=Settings(anonymized_telemetry=False),
+        )
+        coll = client.get_or_create_collection(
+            name=collection,
+            metadata={"hnsw:space": "cosine"},
+        )
+        return client, coll
 
     # =========================================================
     # ADD DOCUMENTS  (called by ingest.py)

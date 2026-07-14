@@ -11,7 +11,7 @@ from clinical.db import (
     save_generated_profile,
 )
 from clinical.schemas import DiseaseProfile, StructuredDiagnosis
-from clinical.utils import slugify
+from clinical.utils import normalize_severity, slugify
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,7 @@ def get_or_generate_profile(name: str, rag_instance=None, generate: bool = True)
         data = json.loads(raw)
         data["name"] = data.get("name") or name
         data["slug"] = slugify(data["name"])
+        data["severity"] = normalize_severity(data.get("severity"))
         data["disclaimer"] = DISCLAIMER
         return save_generated_profile(data)
     except Exception as exc:

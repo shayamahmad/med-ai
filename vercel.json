@@ -1,0 +1,40 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "frontend": {
+      "root": "medai-frontend/",
+      "buildCommand": "npm ci && npm run build",
+      "outputDirectory": "build"
+    },
+    "backend": {
+      "root": "backend/",
+      "entrypoint": "main:app",
+      "framework": "fastapi"
+    }
+  },
+  "rewrites": [
+    { "source": "/health", "destination": { "service": "backend" } },
+    { "source": "/classify/:path*", "destination": { "service": "backend" } },
+    { "source": "/explain/:path*", "destination": { "service": "backend" } },
+    { "source": "/rag/:path*", "destination": { "service": "backend" } },
+    { "source": "/symptom-check", "destination": { "service": "backend" } },
+    { "source": "/clinical/:path*", "destination": { "service": "backend" } },
+    { "source": "/cds/:path*", "destination": { "service": "backend" } },
+    { "source": "/study/:path*", "destination": { "service": "backend" } },
+    { "source": "/lifestyle/:path*", "destination": { "service": "backend" } },
+    { "source": "/api/:path*", "destination": { "service": "backend" } },
+    { "source": "/models/:path*", "destination": { "service": "backend" } },
+    { "source": "/system/:path*", "destination": { "service": "backend" } },
+    { "source": "/quiz/:path*", "destination": { "service": "backend" } },
+    { "source": "/docs", "destination": { "service": "backend" } },
+    { "source": "/docs/:path*", "destination": { "service": "backend" } },
+    { "source": "/openapi.json", "destination": { "service": "backend" } },
+    { "source": "/redoc", "destination": { "service": "backend" } },
+    { "source": "/(.*)", "destination": { "service": "frontend" } }
+  ],
+  "functions": {
+    "backend/main.py": {
+      "maxDuration": 60
+    }
+  }
+}

@@ -37,6 +37,9 @@ class GradCAM:
             return self.model.layer4[-1].conv3
         elif self.model_arch == "efficientnet":
             return self.model.conv_head
+        elif self.model_arch == "densenet":
+            target = self.model.base if hasattr(self.model, "base") else self.model
+            return target.features.denseblock4.denselayer16.conv2
         else:
             return self.model.layer4[-1].conv3
 

@@ -1,0 +1,14 @@
+{
+  "model_name": "Bone X-Ray Fracture (HF ViT fallback)",
+  "num_classes": 2,
+  "classes": ["Fractured", "Normal"],
+  "class_to_idx": {
+    "Fractured": 0,
+    "Normal": 1
+  },
+  "input_size": [224, 224],
+  "normalize_mean": [0.485, 0.456, 0.406],
+  "normalize_std": [0.229, 0.224, 0.225],
+  "scan_type": "X-Ray",
+  "fallback_source": "camtay07/bone_fracture_model"
+}

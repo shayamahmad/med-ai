@@ -121,4 +121,7 @@ def _parse_markdown_fallback(answer: str) -> dict:
             }
         ]
 
-    return {"summary": answer[:280], "diagnoses": diagnoses}
+    # Don't expose raw JSON or markdown fences as the summary
+    raw = answer[:280].strip()
+    clean_summary = "" if raw.startswith(("{", "[", "```")) else raw
+    return {"summary": clean_summary, "diagnoses": diagnoses}

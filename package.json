@@ -8,7 +8,7 @@
     "start:backend": "cd backend && .venv\\Scripts\\uvicorn main:app --host 127.0.0.1 --port 8000",
     "start:frontend": "cd medai-frontend && npm start",
     "install:frontend": "npm install --prefix medai-frontend",
-    "install:backend": "cd backend && py -3.13 -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt",
+    "install:backend": "powershell -ExecutionPolicy Bypass -File ./scripts/setup.ps1",
     "download:assets": "backend\\.venv\\Scripts\\python.exe scripts\\download_assets.py",
     "upload:assets": "backend\\.venv\\Scripts\\python.exe scripts\\upload_to_hf.py"
   }

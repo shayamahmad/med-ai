@@ -52,9 +52,8 @@ def check_symptoms(symptoms: list, rag_instance=None) -> dict:
         diagnoses = attach_clinical_flags(parsed.get("diagnoses", []))
 
         summary = parsed.get("summary", "")
-        answer = result.get("answer", "")
-        if summary and summary not in answer:
-            answer = f"{summary}\n\n{answer}"
+        # Use only the clean parsed summary — never forward the raw LLM JSON blob
+        answer = summary
 
         response = SymptomCheckResponse(
             input_symptoms=symptoms,

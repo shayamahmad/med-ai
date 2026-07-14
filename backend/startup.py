@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import threading
 from typing import Any
 
 from asset_loader import load_all_assets
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 _rag: Any = None
 _rag_error: str | None = None
+_rag_lock = threading.Lock()
 
 
 def mistral_configured() -> bool:
@@ -47,9 +49,16 @@ def get_rag():
     """Return the RAG singleton, initializing it on first use."""
     global _rag, _rag_error
 
+    with _rag_lock:
+        return _get_rag_unlocked()
+
+
+def _get_rag_unlocked():
+    global _rag, _rag_error
+
     if _rag is not None:
         if _rag.mistral is None and mistral_configured():
-            logger.info("[Startup] MISTRAL_API_KEY now set — reinitializing RAG")
+            logger.info("[Startup] MISTRAL_API_KEY now set - reinitializing RAG")
             reset_rag_cache()
         else:
             return _rag
@@ -89,7 +98,7 @@ def rag_status() -> tuple[bool, str | None]:
         return False, "MISTRAL_API_KEY not set in .env"
     if _rag_error is not None:
         return False, _rag_error
-    return False, "RAG initializing — wait ~30s after backend start, then retry"
+    return False, "RAG initializing - wait ~30s after backend start, then retry"
 
 
 def init_rag_on_first_use() -> None:
@@ -114,7 +123,7 @@ def run_heavy_startup() -> dict[str, Any]:
 
     status = registry.status()
     loaded = sum(status.values())
-    logger.info("Models loaded: %s/8 — %s", loaded, status)
+    logger.info("Models loaded: %s/8 - %s", loaded, status)
 
     init_rag_on_first_use()
 

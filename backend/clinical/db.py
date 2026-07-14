@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from clinical.schemas import DiseaseProfile, MedicationCategory
-from clinical.utils import parse_json_list, parse_json_meds, slugify
+from clinical.utils import normalize_severity, parse_json_list, parse_json_meds, slugify
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ def _row_to_profile(row: sqlite3.Row) -> DiseaseProfile:
         slug=row["slug"],
         name=row["name"],
         aliases=parse_json_list(row["aliases"]),
-        severity=row["severity"],
+        severity=normalize_severity(row["severity"]),
         overview=row["overview"],
         underlying_cause=row["underlying_cause"],
         first_line_treatment=parse_json_list(row["first_line_treatment"]),
@@ -103,7 +103,7 @@ def upsert_disease(conn: sqlite3.Connection, data: dict, generated_by_ai: bool =
         "slug": slug,
         "name": data["name"],
         "aliases": json.dumps(data.get("aliases", [])),
-        "severity": data.get("severity", "moderate"),
+        "severity": normalize_severity(data.get("severity", "moderate")),
         "overview": data.get("overview", ""),
         "underlying_cause": data.get("underlying_cause", ""),
         "first_line_treatment": json.dumps(data.get("first_line_treatment", [])),

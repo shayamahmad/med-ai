@@ -54,13 +54,19 @@ def load_all_assets(force: bool = False) -> None:
 
     repo_id = os.environ.get("HF_ASSETS_REPO", "").strip()
     if not repo_id or repo_id.startswith("your-"):
-        logger.warning(
-            "[Assets] HF_ASSETS_REPO not configured. Image classifiers need model files.\n"
-            "  1. Create a free dataset: https://huggingface.co/new-dataset\n"
-            "  2. Upload backend/models, chromadb, medical_sources (see README)\n"
-            "  3. Set HF_ASSETS_REPO=your-username/medai-assets in .env\n"
-            "  4. Run: npm run download:assets"
-        )
+        if force:
+            logger.info(
+                "[Assets] HF_ASSETS_REPO not configured — skipping custom dataset download. "
+                "Public model fallbacks will be used at load time."
+            )
+        else:
+            logger.warning(
+                "[Assets] HF_ASSETS_REPO not configured. Image classifiers need model files.\n"
+                "  1. Create a free dataset: https://huggingface.co/new-dataset\n"
+                "  2. Upload backend/models, chromadb, medical_sources (see README)\n"
+                "  3. Set HF_ASSETS_REPO=your-username/medai-assets in .env\n"
+                "  4. Run: npm run download:assets"
+            )
         return
 
     try:

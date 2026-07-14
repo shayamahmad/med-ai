@@ -79,7 +79,7 @@ async def study_chat(book_id: str, payload: BookChatRequest):
         return result
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc:
+    except (KeyError, RuntimeError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
@@ -89,7 +89,7 @@ async def study_generate_quiz(book_id: str, payload: QuizGenerateRequest):
         return create_quiz(book_id, payload)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc:
+    except (KeyError, RuntimeError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
@@ -99,7 +99,7 @@ async def study_generate_exam(book_id: str, payload: ExamGenerateRequest):
         return create_exam(book_id, payload)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc:
+    except (KeyError, RuntimeError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
@@ -127,5 +127,5 @@ async def study_tools(book_id: str, tool: str, payload: StudyToolRequest):
         return run_study_tool(book_id, tool, payload)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc:
+    except (KeyError, RuntimeError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

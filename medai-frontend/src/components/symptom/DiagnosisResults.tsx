@@ -203,7 +203,11 @@ const DiagnosisResults: React.FC<Props> = ({ result }) => {
           </div>
         </>
       ) : (
-        <p style={{ color: DIM, fontSize: 15, lineHeight: 1.75 }}>{result.answer}</p>
+        <p style={{ color: DIM, fontSize: 15, lineHeight: 1.75 }}>
+          {result.answer && !result.answer.trimStart().startsWith('{') && !result.answer.trimStart().startsWith('```')
+            ? result.answer
+            : 'No structured results could be parsed. Please try again with more specific symptoms.'}
+        </p>
       )}
 
       {result.sources?.length > 0 && (
