@@ -93,7 +93,7 @@ Write-Host ""
 Write-Host "Setup complete." -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "  1. Edit .env and set MISTRAL_API_KEY for AI tutor"
-Write-Host "  2. npm start - run backend and frontend"
+Write-Host "  1. Edit .env - set MISTRAL_API_KEY (required for AI tutor)"
+Write-Host "  2. npm start          - run backend + frontend"
 Write-Host "  3. npm run download:assets  - optional CNN weights from Hugging Face"
 Write-Host ""

@@ -12,24 +12,24 @@ aiofiles==23.2.1
 # ── PyTorch (CPU) ────────────────────────────────────────────
 # For NVIDIA GPU replace with:
 #   pip install torch==2.4.0 torchvision==0.19.0 --index-url https://download.pytorch.org/whl/cu121
-torch==2.4.0
-torchvision==0.19.0
+torch>=2.6.0
+torchvision>=0.21.0
 
 # ── Deep Learning / CNN Models ───────────────────────────────
 timm==0.9.16
-Pillow==10.3.0
-opencv-python==4.9.0.80
-numpy==1.26.4
-scikit-learn==1.5.0
+Pillow>=10.4.0
+opencv-python>=4.10.0
+numpy>=1.26.4
+scikit-learn>=1.5.2
 
 # ── RAG System ───────────────────────────────────────────────
 chromadb==0.5.23
 sentence-transformers==3.0.1
-transformers==4.44.0
-tokenizers==0.19.1
+transformers>=4.44.0
+tokenizers>=0.20.0
 
 # ── PDF Ingestion ────────────────────────────────────────────
-PyMuPDF==1.24.5
+PyMuPDF>=1.24.10
 
 # ── AI API ───────────────────────────────────────────────────
 mistralai==2.4.4
