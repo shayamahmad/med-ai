@@ -78,11 +78,26 @@ export const askOrganAI = (organName: string) => askTutor(
 );
 
 // ── Symptom Checker ───────────────────────────────────────────
-export const checkSymptoms = async (symptoms: string): Promise<SymptomCheckResult> => {
-  const symptomList = symptoms
+function buildSymptomPayload(text: string): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  const isNarrative =
+    trimmed.length > 80 ||
+    /\b(presents|patient|child|years?\s*old|complaints?|labs?\s|suspect|vignette|history of)\b/i.test(trimmed);
+
+  if (isNarrative) {
+    return [trimmed];
+  }
+
+  return trimmed
     .split(/[,;]+/)
-    .map(s => s.trim().toLowerCase())
+    .map(s => s.trim())
     .filter(Boolean);
+}
+
+export const checkSymptoms = async (symptoms: string): Promise<SymptomCheckResult> => {
+  const symptomList = buildSymptomPayload(symptoms);
   const { data } = await api.post('/symptom-check', { symptoms: symptomList }, { timeout: 90000 });
   return data;
 };
@@ -107,6 +122,7 @@ export const generateDietLifestyleReport = async (
 };
 
 // ── Study Companion ───────────────────────────────────────────
+const STUDY_LONG_TIMEOUT = 120000;
 const studyApi = axios.create({ baseURL: BASE, timeout: 60000 });
 
 export const checkBackendHealth = async (): Promise<boolean> => {
@@ -152,19 +168,21 @@ export const chatWithBook = async (
     message,
     history,
     chapter_id: chapterId || null,
-  });
+  }, { timeout: STUDY_LONG_TIMEOUT });
   return data as { answer: string; citations: ChatMessage['citations']; disclaimer: string };
 };
 
 export const generateBookQuiz = async (bookId: string, config: Record<string, unknown>) => {
   const { data } = await studyApi.post(`/study/books/${bookId}/quiz/generate`, config, {
-    timeout: 120000,
+    timeout: STUDY_LONG_TIMEOUT,
   });
   return data as { attempt_id: string; questions: QuizQuestion[]; disclaimer: string };
 };
 
 export const generateBookExam = async (bookId: string, config: Record<string, unknown>) => {
-  const { data } = await studyApi.post(`/study/books/${bookId}/exam/generate`, config);
+  const { data } = await studyApi.post(`/study/books/${bookId}/exam/generate`, config, {
+    timeout: STUDY_LONG_TIMEOUT,
+  });
   return data as { attempt_id: string; questions: QuizQuestion[]; time_limit_minutes: number; disclaimer: string };
 };
 
@@ -179,7 +197,9 @@ export const fetchStudyAnalytics = async (bookId: string): Promise<StudyAnalytic
 };
 
 export const runStudyTool = async (bookId: string, tool: string, payload: Record<string, unknown>) => {
-  const { data } = await studyApi.post(`/study/books/${bookId}/tools/${tool}`, payload);
+  const { data } = await studyApi.post(`/study/books/${bookId}/tools/${tool}`, payload, {
+    timeout: STUDY_LONG_TIMEOUT,
+  });
   return data as { tool: string; content: string; disclaimer: string };
 };
 

@@ -1,4 +1,4 @@
-# MedAI — start backend + frontend (Windows)
+# MedAI - start backend + frontend (Windows)
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $Backend = Join-Path $Root "backend"
@@ -46,7 +46,7 @@ $env:PYTHONUTF8 = "1"
 if (-not $env:REACT_APP_API_URL) {
     $env:REACT_APP_API_URL = "http://localhost:8000"
 }
-# Placeholder HF repo breaks the 3D viewer — use backend proxy instead
+# Placeholder HF repo breaks the 3D viewer - use backend proxy instead
 if ($env:REACT_APP_HF_ASSETS_REPO -match 'your-username|placeholder|example') {
     Remove-Item Env:REACT_APP_HF_ASSETS_REPO -ErrorAction SilentlyContinue
 }
@@ -86,7 +86,64 @@ if ($ready) {
     exit 1
 }
 
+function Test-FrontendReact {
+    param([string]$FrontendPath)
+    $reactIndex = Join-Path $FrontendPath "node_modules\react\index.js"
+    if (-not (Test-Path $reactIndex)) { return $false }
+    Push-Location $FrontendPath
+    node -e "const r=require('react'); if (typeof r.useState !== 'function') process.exit(1)" 2>$null | Out-Null
+    $ok = $LASTEXITCODE -eq 0
+    Pop-Location
+    return $ok
+}
+
+function Install-FrontendDeps {
+    param([string]$FrontendPath)
+    Write-Host "Repairing frontend dependencies (npm ci)..." -ForegroundColor Yellow
+    Push-Location $FrontendPath
+    npm ci
+    if ($LASTEXITCODE -ne 0) {
+        Pop-Location
+        Write-Host "npm ci failed. Run from repo root: npm run setup" -ForegroundColor Red
+        exit 1
+    }
+    Pop-Location
+}
+
+function Clear-FrontendWebpackCache {
+    param([string]$FrontendPath)
+    $webpackCache = Join-Path $FrontendPath "node_modules\.cache"
+    if (Test-Path $webpackCache) {
+        Remove-Item -Recurse -Force $webpackCache -ErrorAction SilentlyContinue
+    }
+}
+
 Write-Host "Starting frontend on http://localhost:3000 ..." -ForegroundColor Cyan
+
+# Stop stale dev server so webpack does not reuse a broken compile cache
+Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue |
+    ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+Start-Sleep -Seconds 1
+
+$webpackLoader = Join-Path $Frontend "node_modules\html-webpack-plugin\lib\loader.js"
+$lodashTemplate = Join-Path $Frontend "node_modules\lodash\template.js"
+$needsInstall = (-not (Test-Path $webpackLoader)) -or (-not (Test-Path $lodashTemplate)) -or (-not (Test-FrontendReact $Frontend))
+if ($needsInstall) {
+    if ((Test-Path (Join-Path $Frontend "node_modules")) -and (Test-Path (Join-Path $Frontend "package-lock.json"))) {
+        Install-FrontendDeps -FrontendPath $Frontend
+    } else {
+        Write-Host "Frontend node_modules missing - run: npm run setup" -ForegroundColor Red
+        exit 1
+    }
+}
+
+if (-not (Test-FrontendReact $Frontend)) {
+    Write-Host "React install is still broken after npm ci. Run: npm run setup" -ForegroundColor Red
+    exit 1
+}
+
+Clear-FrontendWebpackCache -FrontendPath $Frontend
+
 $reactEnv = @()
 Get-ChildItem env:REACT_APP_* -ErrorAction SilentlyContinue | ForEach-Object {
     $val = $_.Value -replace "'", "''"
@@ -95,7 +152,8 @@ Get-ChildItem env:REACT_APP_* -ErrorAction SilentlyContinue | ForEach-Object {
 if ($reactEnv.Count -eq 0) {
     $reactEnv += "`$env:REACT_APP_API_URL='http://localhost:8000'"
 }
-$frontendCmd = "Set-Location '$Frontend'; $($reactEnv -join '; '); npm start"
+$envSetup = $reactEnv -join "; "
+$frontendCmd = "Set-Location -LiteralPath `"$Frontend`"; $envSetup; npm start"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $frontendCmd
 
 Write-Host ""

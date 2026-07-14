@@ -86,7 +86,11 @@ Remove-Item $coreReq -ErrorAction SilentlyContinue
 Write-Host ""
 Write-Host "Installing frontend..." -ForegroundColor Cyan
 Set-Location $Frontend
-npm install
+if (Test-Path "package-lock.json") {
+    npm ci
+} else {
+    npm install
+}
 
 Set-Location $Root
 Write-Host ""

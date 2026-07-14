@@ -7,7 +7,8 @@
     "start": "powershell -ExecutionPolicy Bypass -File ./scripts/start.ps1",
     "start:backend": "cd backend && .venv\\Scripts\\uvicorn main:app --host 127.0.0.1 --port 8000",
     "start:frontend": "cd medai-frontend && npm start",
-    "install:frontend": "npm install --prefix medai-frontend",
+    "install:frontend": "npm ci --prefix medai-frontend",
+    "fix:frontend": "powershell -ExecutionPolicy Bypass -Command \"Remove-Item -Recurse -Force medai-frontend\\node_modules\\.cache -ErrorAction SilentlyContinue; npm ci --prefix medai-frontend\"",
     "install:backend": "powershell -ExecutionPolicy Bypass -File ./scripts/setup.ps1",
     "download:assets": "backend\\.venv\\Scripts\\python.exe scripts\\download_assets.py",
     "upload:assets": "backend\\.venv\\Scripts\\python.exe scripts\\upload_to_hf.py"

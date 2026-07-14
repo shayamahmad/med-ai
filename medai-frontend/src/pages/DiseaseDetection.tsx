@@ -2,9 +2,11 @@ import React, { useState, useCallback } from 'react';
 import ImageUploader from '../components/ImageUploader';
 import ConfidenceBar from '../components/ConfidenceBar';
 import ClinicalDecisionReport from '../components/detection/ClinicalDecisionReport';
+import DownloadPdfButton from '../components/shared/DownloadPdfButton';
 import { classifyChest, classifyBrain, classifyEye, classifySkin, classifyBone, classifyKnee, classifyDental, getGradcam, generateImagingCDSReport } from '../api';
 import { ClassificationResult } from '../types';
 import { CDSReport } from '../types/cds';
+import { generateDetectionReportPdf } from '../utils/pdf/detectionReportPdf';
 
 const TEXT = '#d0e4f0';
 const DIM = 'rgba(180,220,240,0.75)';
@@ -59,6 +61,7 @@ const DiseaseDetection: React.FC = () => {
   const [cdsLoading, setCdsLoading] = useState(false);
   const [cdsError, setCdsError]   = useState('');
   const [error, setError]         = useState('');
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   // Switching scan modality resets ALL state including ImageUploader.
   // key={active.id} on <ImageUploader> causes React to fully remount it,
@@ -136,6 +139,20 @@ const DiseaseDetection: React.FC = () => {
   };
 
   const sorted = result ? Object.entries(result.all_scores).sort((a, b) => b[1] - a[1]) : [];
+
+  const handleDownloadPdf = useCallback(async () => {
+    if (!result) return;
+    setPdfLoading(true);
+    try {
+      await generateDetectionReportPdf(result, {
+        modalityLabel: active.label,
+        modalityId: active.id,
+        architecture: active.arch,
+      }, gradcam, cdsReport);
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [result, active, gradcam, cdsReport]);
 
   return (
     <div style={{ position: 'relative', zIndex: 1, maxWidth: 1400, margin: '0 auto', padding: '3.5rem 3rem' }}>
@@ -266,7 +283,7 @@ const DiseaseDetection: React.FC = () => {
 
           {result && (
             <div className="glass fade-in" style={{ borderRadius: 14, padding: '26px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid rgba(0,229,255,0.09)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid rgba(0,229,255,0.09)', gap: 16, flexWrap: 'wrap' }}>
                 <div>
                   <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: ACCENT, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
                     Primary Diagnosis
@@ -275,13 +292,21 @@ const DiseaseDetection: React.FC = () => {
                     {result.predicted_class.replace(/_/g, ' ')}
                   </p>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: ACCENT, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
-                    Confidence
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: ACCENT, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                      Confidence
+                    </div>
+                    <p style={{ fontFamily: 'Outfit, sans-serif', fontSize: '2.8rem', fontWeight: 900, color: active.color, lineHeight: 1 }}>
+                      {Math.round(result.confidence * 100)}%
+                    </p>
                   </div>
-                  <p style={{ fontFamily: 'Outfit, sans-serif', fontSize: '2.8rem', fontWeight: 900, color: active.color, lineHeight: 1 }}>
-                    {Math.round(result.confidence * 100)}%
-                  </p>
+                  <DownloadPdfButton
+                    onDownload={handleDownloadPdf}
+                    loading={pdfLoading}
+                    disabled={cdsLoading}
+                    label="Download PDF Report"
+                  />
                 </div>
               </div>
 

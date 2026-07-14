@@ -21,6 +21,8 @@ FALLBACKS: dict[str, dict[str, Any]] = {
         "filename": "pytorch_model.safetensors",
         "builder": "densenet121_chexpert_mapped",
         "num_classes": 14,
+        "strict_load": False,
+        "load_target": "base",
     },
     "bone": {
         "repo_id": "camtay07/bone_fracture_model",
@@ -84,6 +86,9 @@ class MappedChestModel(nn.Module):
 BUILDERS = {
     "resnet50_compact": _build_resnet50_compact,
     "densenet121_chexpert": _build_densenet121_chexpert,
+    "densenet121_chexpert_mapped": lambda num_classes: MappedChestModel(
+        _build_densenet121_chexpert(num_classes)
+    ),
 }
 
 
@@ -158,17 +163,14 @@ def load_fallback_model(key: str, meta: dict, device: torch.device):
 
         builder_name = spec["builder"]
         num_classes = spec.get("num_classes") or meta["num_classes"]
+        builder = BUILDERS.get(builder_name)
+        if builder is None:
+            raise KeyError(f"Unknown fallback builder '{builder_name}' for model '{key}'")
 
-        if builder_name == "densenet121_chexpert_mapped":
-            base = _build_densenet121_chexpert(num_classes)
-            state = load_file(weights_path)
-            base.load_state_dict(state, strict=False)
-            model = MappedChestModel(base)
-        else:
-            builder = BUILDERS[builder_name]
-            model = builder(meta["num_classes"])
-            state = load_file(weights_path)
-            model.load_state_dict(state, strict=True)
+        model = builder(num_classes)
+        state = load_file(weights_path)
+        load_target = getattr(model, spec["load_target"]) if spec.get("load_target") else model
+        load_target.load_state_dict(state, strict=spec.get("strict_load", True))
 
         model.to(device)
         model.eval()

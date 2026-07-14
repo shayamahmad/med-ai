@@ -1,12 +1,14 @@
 import React, { useCallback, useState } from 'react';
 import axios from 'axios';
 import { fetchClinicalProfile, generateDietLifestyleReport } from '../../api';
+import DownloadPdfButton from '../shared/DownloadPdfButton';
 import { DiseaseProfile, StructuredDiagnosis, SymptomCheckResult } from '../../types/clinical';
 import {
   DietLifestyleProfile,
   DietLifestyleReport,
   SymptomWorkflowStep,
 } from '../../types/lifestyle';
+import { generateSymptomReportPdf } from '../../utils/pdf/symptomReportPdf';
 import ClinicalTreatmentPanel from './ClinicalTreatmentPanel';
 import DiagnosisCard from './DiagnosisCard';
 import DietLifestyleIntake from './DietLifestyleIntake';
@@ -30,8 +32,33 @@ const DiagnosisResults: React.FC<Props> = ({ result }) => {
   const [lifestyleReport, setLifestyleReport] = useState<DietLifestyleReport | null>(null);
   const [lifestyleLoading, setLifestyleLoading] = useState(false);
   const [lifestyleError, setLifestyleError] = useState('');
+  const [pdfLoading, setPdfLoading] = useState(false);
 
-  const diagnoses = result.diagnoses?.length ? result.diagnoses : [];
+  const diagnoses = (result.diagnoses ?? []).filter(
+    d => d.name && !d.name.startsWith('```') && !d.name.startsWith('{'),
+  );
+
+  const handleDownloadPdf = useCallback(async () => {
+    setPdfLoading(true);
+    try {
+      const mergedProfiles = { ...profiles };
+      const missing = diagnoses.filter(
+        d => d.clinical_available && !mergedProfiles[d.slug],
+      );
+      await Promise.all(
+        missing.map(async d => {
+          try {
+            mergedProfiles[d.slug] = await fetchClinicalProfile(d.slug, d.name);
+          } catch {
+            // Include card data even if clinical guide fetch fails
+          }
+        }),
+      );
+      generateSymptomReportPdf(result, mergedProfiles);
+    } finally {
+      setPdfLoading(false);
+    }
+  }, [diagnoses, profiles, result]);
 
   const handleToggle = useCallback(async (diagnosis: StructuredDiagnosis) => {
     if (workflowStep === 'diet' || workflowStep === 'followup') return;
@@ -140,9 +167,18 @@ const DiagnosisResults: React.FC<Props> = ({ result }) => {
 
   return (
     <div className="diagnosis-results">
-      <SymptomWorkflowStepper current={workflowStep === 'clinical' ? 'clinical' : 'detection'} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
+        <SymptomWorkflowStepper current={workflowStep === 'clinical' ? 'clinical' : 'detection'} />
+        {diagnoses.length > 0 && (
+          <DownloadPdfButton
+            onDownload={handleDownloadPdf}
+            loading={pdfLoading}
+            label="Download PDF Report"
+          />
+        )}
+      </div>
 
-      {result.summary && (
+      {(result.summary && !result.summary.trimStart().startsWith('```') && !result.summary.trimStart().startsWith('{')) && (
         <p style={{ color: DIM, fontSize: 15, lineHeight: 1.75, marginBottom: 20 }}>
           {result.summary}
         </p>

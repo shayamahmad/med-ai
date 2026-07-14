@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { ORGANS } from '../data/organs';
 import { AnatomySystem } from '../types/anatomy.types';
@@ -121,7 +121,7 @@ export function useOrganSelection() {
 
   const getMesh = useCallback((organId: string) => meshRefs.current.get(organId), []);
 
-  return {
+  return useMemo(() => ({
     selectedOrgan,
     selectedSubStructure,
     activeSystem,
@@ -135,5 +135,19 @@ export function useOrganSelection() {
     updateVisuals,
     applyOpacity,
     applyEmissive,
-  };
+  }), [
+    selectedOrgan,
+    selectedSubStructure,
+    activeSystem,
+    selectOrgan,
+    clearSelection,
+    setSystem,
+    registerMesh,
+    unregisterMesh,
+    highlightOrganEmissive,
+    getMesh,
+    updateVisuals,
+    applyOpacity,
+    applyEmissive,
+  ]);
 }

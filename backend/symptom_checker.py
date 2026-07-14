@@ -42,10 +42,11 @@ def check_symptoms(symptoms: list, rag_instance=None) -> dict:
     query = build_structured_symptom_query(symptoms)
 
     try:
+        context_hint = symptoms[0] if len(symptoms) == 1 else ", ".join(symptoms)
         result = rag_instance.query(
             question=query,
-            context_hint=", ".join(symptoms),
-            max_tokens=1600,
+            context_hint=context_hint,
+            max_tokens=2400,
             mode="symptom",
         )
         parsed = parse_structured_response(result.get("answer", ""))

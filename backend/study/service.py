@@ -33,10 +33,11 @@ def _book_saved_path(book: dict) -> Path | None:
     return path if path.exists() else None
 
 
-def _schedule_reindex(book_id: str, saved_path: Path) -> None:
+def _schedule_reindex(book_id: str, saved_path: Path) -> bool:
+    """Start a background reindex if one is not already running."""
     with _reindex_lock:
         if book_id in _reindex_started or book_id in _processing_books:
-            return
+            return True
         _reindex_started.add(book_id)
     update_book(book_id, status="processing", progress=0.05, error_message=None)
     threading.Thread(
@@ -45,6 +46,7 @@ def _schedule_reindex(book_id: str, saved_path: Path) -> None:
         daemon=True,
         name=f"study-reindex-{book_id}",
     ).start()
+    return True
 
 
 def _run_reindex(book_id: str, saved_path: Path) -> None:
@@ -66,6 +68,11 @@ def _schedule_reindex_for_ready_books() -> None:
             _schedule_reindex(book["id"], saved_path)
 
 
+def _book_reindex_in_progress(book_id: str) -> bool:
+    with _reindex_lock:
+        return book_id in _reindex_started or book_id in _processing_books
+
+
 def _ensure_book_indexed(book: dict, rag: BookRAG) -> None:
     if rag.collection.count() > 0:
         return
@@ -78,10 +85,12 @@ def _ensure_book_indexed(book: dict, rag: BookRAG) -> None:
         raise RuntimeError(
             "Book search index is missing and the original file was not found. Please upload the book again."
         )
-    if book["status"] == "processing":
-        raise RuntimeError("Book index is being rebuilt. Please wait a minute and try again.")
-    _schedule_reindex(book["id"], saved_path)
-    raise RuntimeError("Book index is being rebuilt. Please wait a minute and try again.")
+    if book["status"] == "processing" or _book_reindex_in_progress(book["id"]):
+        return
+    if not _schedule_reindex(book["id"], saved_path):
+        raise RuntimeError(
+            "Book index rebuild could not be started. Please upload the book again."
+        )
 
 
 def get_book_rag(book: dict, *, require_index: bool = True) -> BookRAG:
@@ -95,6 +104,8 @@ def get_book_rag(book: dict, *, require_index: bool = True) -> BookRAG:
     rag = _rag_cache[name]
     if require_index:
         _ensure_book_indexed(book, rag)
+        if rag.collection.count() == 0:
+            raise RuntimeError("Book index is being rebuilt. Please wait a minute and try again.")
     return rag
 
 

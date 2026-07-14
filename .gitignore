@@ -12,7 +12,6 @@ build/
 # Docker
 .docker/
 medical_sources/
-*pdf
 backend/data/*.db
 backend/data/study_uploads/
 backend/chromadb_study/
