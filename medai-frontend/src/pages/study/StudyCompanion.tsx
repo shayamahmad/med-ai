@@ -228,15 +228,15 @@ const StudyCompanion: React.FC = () => {
     setQuestions([]);
   };
 
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     if (!selectedBook) return;
     const data = await fetchStudyAnalytics(selectedBook.id);
     setAnalytics(data);
-  };
+  }, [selectedBook]);
 
   useEffect(() => {
     if (tab === 'analytics' && selectedBook) loadAnalytics();
-  }, [tab, selectedBook?.id]);
+  }, [tab, selectedBook, loadAnalytics]);
 
   const runTool = async (tool: string, topic: string) => {
     if (!selectedBook) return;

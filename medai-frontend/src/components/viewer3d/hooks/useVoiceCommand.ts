@@ -55,29 +55,6 @@ export function useVoiceCommand(handlers: VoiceCommandHandlers) {
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
-  useEffect(() => {
-    const win = window as any;
-    const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    setSupported(true);
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-
-    recognition.onresult = (event: { results: { [index: number]: { [index: number]: { transcript: string } } } }) => {
-      const text = event.results[0][0].transcript.toLowerCase();
-      setTranscript(text);
-      parseAndExecuteCommand(text, handlersRef.current);
-      setListening(false);
-    };
-
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
-    recognitionRef.current = recognition;
-  }, []);
-
   const parseAndExecuteCommand = useCallback((text: string, h: VoiceCommandHandlers) => {
     if (text.includes('reset')) {
       h.onReset();
@@ -113,6 +90,29 @@ export function useVoiceCommand(handlers: VoiceCommandHandlers) {
     const organId = findOrganByPhrase(text);
     if (organId) h.onShowOrgan(organId);
   }, []);
+
+  useEffect(() => {
+    const win = window as any;
+    const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    setSupported(true);
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+
+    recognition.onresult = (event: { results: { [index: number]: { [index: number]: { transcript: string } } } }) => {
+      const text = event.results[0][0].transcript.toLowerCase();
+      setTranscript(text);
+      parseAndExecuteCommand(text, handlersRef.current);
+      setListening(false);
+    };
+
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+  }, [parseAndExecuteCommand]);
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current || listening) return;

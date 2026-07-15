@@ -30,7 +30,7 @@ const OrganInfoPanel: React.FC<OrganInfoPanelProps> = ({ onDiseaseClick }) => {
       .then(res => setAiInsights(res.answer))
       .catch(() => setAiInsights('Unable to load AI insights at this time.'))
       .finally(() => setAiLoading(false));
-  }, [organ?.id]);
+  }, [organ]);
 
   const sub = organ?.subStructures.find(s => s.id === selection.selectedSubStructure);
 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ClassificationResult, RAGResponse, SymptomResult, AutoClassifyResult, TopKItem } from '../types';
+import { ClassificationResult, RAGResponse, AutoClassifyResult, TopKItem } from '../types';
 import { DiseaseProfile, SymptomCheckResult } from '../types/clinical';
 import {
   AssessmentResult,

@@ -1,7 +1,6 @@
 import React from 'react';
 import { AssessmentResult, StudyAnalytics } from '../../types/study';
 
-const TEXT = '#d0e4f0';
 const DIM = 'rgba(180,220,240,0.75)';
 const ACCENT = '#00e5ff';
 

@@ -26,7 +26,8 @@ const OrganMesh: React.FC<OrganMeshProps> = ({ organ, onClick }) => {
   const cloned = useRef<THREE.Object3D | null>(null);
 
   useEffect(() => {
-    if (!groupRef.current) return;
+    const group = groupRef.current;
+    if (!group) return;
     const clone = scene.clone(true);
     scaleAndCenter(clone);
     clone.traverse(child => {
@@ -39,17 +40,17 @@ const OrganMesh: React.FC<OrganMeshProps> = ({ organ, onClick }) => {
     });
     clone.name = organ.id;
     clone.userData.organId = organ.id;
-    groupRef.current.add(clone);
+    group.add(clone);
     cloned.current = clone;
     selection.registerMesh(organ.id, clone);
 
     const [rx, ry, rz] = organ.restPosition;
-    groupRef.current.position.set(rx, ry, rz);
-    groupRef.current.userData.restPosition = [...organ.restPosition];
+    group.position.set(rx, ry, rz);
+    group.userData.restPosition = [...organ.restPosition];
 
     return () => {
       selection.unregisterMesh(organ.id);
-      groupRef.current?.remove(clone);
+      group.remove(clone);
     };
   }, [organ, scene, selection]);
 

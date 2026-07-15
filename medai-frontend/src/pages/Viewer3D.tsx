@@ -417,6 +417,8 @@ const Viewer3D: React.FC = () => {
       renderer.dispose();
       sceneRef.current = null;
     };
+    // wireframe and autoRotate are applied via dedicated effects below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
   useEffect(() => {

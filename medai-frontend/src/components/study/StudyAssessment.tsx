@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { QuizQuestion } from '../../types/study';
 
 const TEXT = '#d0e4f0';
@@ -64,6 +64,13 @@ const StudyAssessment: React.FC<Props> = ({ questions, mode, timeLimitMinutes = 
   const [startedAt] = useState(Date.now());
   const [secondsLeft, setSecondsLeft] = useState(timeLimitMinutes * 60);
 
+  const finish = useCallback(async () => {
+    setSubmitting(true);
+    const duration = Math.round((Date.now() - startedAt) / 1000);
+    await onSubmit(answers, duration);
+    setSubmitting(false);
+  }, [answers, onSubmit, startedAt]);
+
   useEffect(() => {
     if (mode !== 'exam') return;
     const timer = setInterval(() => {
@@ -77,18 +84,11 @@ const StudyAssessment: React.FC<Props> = ({ questions, mode, timeLimitMinutes = 
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [mode]);
+  }, [mode, finish]);
 
   const q = questions[current];
   const progress = ((current + 1) / questions.length) * 100;
   const inputMode = q ? resolveInputMode(q) : 'text';
-
-  const finish = async () => {
-    setSubmitting(true);
-    const duration = Math.round((Date.now() - startedAt) / 1000);
-    await onSubmit(answers, duration);
-    setSubmitting(false);
-  };
 
   const mmss = useMemo(() => {
     const m = Math.floor(secondsLeft / 60);

@@ -40,7 +40,7 @@ const ImagingSync: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   const thumbnails = useMemo(
     () => Array.from({ length: 12 }, (_, i) => Math.floor((i / 11) * 100)),
-    [imagingModality],
+    [],
   );
 
   return (
